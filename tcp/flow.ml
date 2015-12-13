@@ -87,7 +87,7 @@ module Make(IP:V1_LWT.IP)(TM:V1_LWT.TIME)(C:V1.CLOCK)(R:V1.RANDOM) = struct
   let disconnect _ = Lwt.return_unit
 
   let create_connection tcp (daddr, dport) =
-    Printf.printf "Creating connection to remote on port %d" (dport);
+    Printf.printf "Creating connection to remote on port %d\n" (dport);
     Pcb.connect tcp ~dest_ip:daddr ~dest_port:dport >>= function
     | `Timeout    -> err_timeout daddr dport
     | `Rst        -> err_refused daddr dport
