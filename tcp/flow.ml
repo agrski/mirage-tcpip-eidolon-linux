@@ -53,7 +53,7 @@ module Make(IP:V1_LWT.IP)(TM:V1_LWT.TIME)(C:V1.CLOCK)(R:V1.RANDOM) = struct
           Ipaddr.pp_hum (IP.to_uipaddr daddr) dport);
     Lwt.return (`Error `Refused)
 
-  let ok x = Printf.printf "okay"; Lwt.return (`Ok x)
+  let ok x = Printf.printf "Returning okay\n"; Lwt.return (`Ok x)
 
   let error_message = function
     | `Unknown msg -> msg
@@ -87,7 +87,7 @@ module Make(IP:V1_LWT.IP)(TM:V1_LWT.TIME)(C:V1.CLOCK)(R:V1.RANDOM) = struct
   let disconnect _ = Lwt.return_unit
 
   let create_connection tcp (daddr, dport) =
-    Printf.printf "connecting";
+    Printf.printf "Creating connection: %s %d" (Ipaddr.to_string) (dport);
     Pcb.connect tcp ~dest_ip:daddr ~dest_port:dport >>= function
     | `Timeout    -> err_timeout daddr dport
     | `Rst        -> err_refused daddr dport
