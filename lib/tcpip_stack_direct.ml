@@ -154,6 +154,8 @@ struct
     let { V1_LWT.console = c; interface = netif; mode; _ } = id in
     Console.log_s c "Manager: connect"
     >>= fun () ->
+    Console.log_s c "Setting up listeners"
+    >>= fun () ->
     let udpv4_listeners = Hashtbl.create 7 in
     let tcpv4_listeners = Hashtbl.create 7 in
     let t = { id; c; mode; netif; ethif; arpv4; ipv4; tcpv4; udpv4;
@@ -175,4 +177,7 @@ struct
   let disconnect t =
     (* TODO: kill the listening thread *)
     Console.log_s t.c "Manager: disconnect"
+    >>= fun () ->
+    Console.log_s t.c "Eidolon: disconnected"
+
 end
