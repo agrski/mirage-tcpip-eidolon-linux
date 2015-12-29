@@ -47,6 +47,7 @@ module Rx = struct
     let cur_size = 0l in
     { q; wnd; writers; readers; max_size; cur_size; watcher }
 
+(* HERE Sets size of window; seems unreasonable to change *)
   let notify_size_watcher t =
     let rx_wnd = max 0l (Int32.sub t.max_size t.cur_size) in
     Window.set_rx_wnd t.wnd rx_wnd;
@@ -60,7 +61,8 @@ module Rx = struct
     | Some b -> Cstruct.len b
 
   let add_r t s =
-    if t.cur_size > t.max_size then
+      if t.cur_size > t.max_size then
+      (* Block on writing *)
       let th,u = MProf.Trace.named_task "User_buffer.add_r" in
       let node = Lwt_sequence.add_r u t.writers in
       Lwt.on_cancel th (fun _ -> Lwt_sequence.remove node);
@@ -72,26 +74,30 @@ module Rx = struct
       Lwt.return_unit
     else match Lwt_sequence.take_opt_l t.readers with
       | None ->
+        (* No available readers *)
         t.cur_size <- Int32.(add t.cur_size (of_int (seglen s)));
         ignore(Lwt_sequence.add_r s t.q);
         notify_size_watcher t
       | Some u ->
+        (* Wake up an available reader *)
         Lwt.return (Lwt.wakeup u s)
 
   let take_l t =
     if Lwt_sequence.is_empty t.q then begin
+      (* No readers exist, so create one *)
       let th,u = MProf.Trace.named_task "User_buffer.take_l" in
       let node = Lwt_sequence.add_r u t.readers in
       Lwt.on_cancel th (fun _ -> Lwt_sequence.remove node);
       th
     end else begin
+      (* Reader(s) exist(s) *)
       let s = Lwt_sequence.take_l t.q in
       t.cur_size <- Int32.(sub t.cur_size (of_int (seglen s)));
       notify_size_watcher t >>= fun () ->
       if t.cur_size < t.max_size then begin
         match Lwt_sequence.take_opt_l t.writers with
-        |None -> ()
-        |Some w -> Lwt.wakeup w ()
+        |None -> ()                   (* No writers - do nothing *)
+        |Some w -> Lwt.wakeup w ()    (* Writer exists - wake up them as free space *)
       end;
       Lwt.return s
     end
@@ -109,7 +115,7 @@ end
    to decide how to throttle or breakup its data production with this
    information.
 *)
-module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) = struct
+module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
 
   module TXS = Segment.Tx(Time)(Clock)
 
@@ -138,6 +144,7 @@ module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) = struct
     |ds -> Int32.of_int (List.fold_left (fun a b -> Cstruct.len b + a) 0 ds)
 
   (* Check how many bytes are available to write to output buffer *)
+(* Compares buffer space to TCP segment payload space *)
   let available t =
     let a = Int32.sub t.max_size t.bufbytes in
     match a < (Int32.of_int (Window.tx_mss t.wnd)) with
@@ -154,6 +161,7 @@ module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) = struct
       Lwt.return_unit
     end
     else begin
+(* Create a writer to wait for monitor to wake it up *)
       let th,u = MProf.Trace.named_task "User_buffer.wait_for" in
       let node = Lwt_sequence.add_r u t.writers in
       Lwt.on_cancel th (fun _ -> Lwt_sequence.remove node);
@@ -162,7 +170,7 @@ module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) = struct
     end
 
   let compactbufs bl =
-    (* TODO: fix hardecoded threshold *)
+    (* TODO: fix hard-coded threshold *)
     if (List.length bl > 8) then begin
       let b = Io_page.(to_cstruct (get 1)) in
       let copyf doff ab =
@@ -249,10 +257,10 @@ module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) = struct
       match datav with
       |[] -> begin
           match acc with
-          |[] -> Lwt.return_unit
-          |_ -> transmit acc
+          |[] -> Lwt.return_unit      (* Nothing to send *)
+          |_ -> transmit acc          (* Send what's been accepted *)
         end
-      |hd::tl ->
+      |hd::tl ->                      (* Determine what to send *)
         let curlen = Cstruct.lenv acc in
         let tlen = Cstruct.len hd + curlen in
         if tlen > mss then begin
@@ -308,8 +316,8 @@ module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) = struct
 
   let inform_app t =
     match Lwt_sequence.take_opt_l t.writers with
-    | None   -> Lwt.return_unit
-    | Some w ->
+    | None   -> Lwt.return_unit         (* No writers - do nothing *)
+    | Some w ->                         (* Wake up a writer *)
       Lwt.wakeup w ();
       (* TODO: check if this should wake all writers not just one *)
       Lwt.return_unit

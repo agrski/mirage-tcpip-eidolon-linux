@@ -364,7 +364,7 @@ module Unmarshal = struct
           |'\005' -> `Ack
           |'\006' -> `Nak
           |'\007' -> `Release
-          |'\008'  -> `Inform
+          |'\008' -> `Inform
           |x -> `Unknown x in
         cont (`Message_type mcode)
       |`Parameter_request ->

@@ -49,9 +49,9 @@ module Make (Ethif : V1_LWT.ETHIF) (Clock : V1.CLOCK) (Time : V1_LWT.TIME) = str
   type id = t
   type error
 
-  let arp_timeout = 60. (* age entries out of cache after this many seconds *)
-  let probe_repeat_delay = 1.5 (* per rfc5227, 2s >= probe_repeat_delay >= 1s *)
-  let probe_num = 3 (* how many probes to send before giving up *)
+  let arp_timeout = 60.         (* age entries out of cache after this many seconds *)
+  let probe_repeat_delay = 1.5  (* per rfc5227, 2s >= probe_repeat_delay >= 1s *)
+  let probe_num = 3             (* how many probes to send before giving up *)
 
   let rec tick t () =
     let now = Clock.time () in
@@ -68,8 +68,8 @@ module Make (Ethif : V1_LWT.ETHIF) (Clock : V1.CLOCK) (Time : V1_LWT.TIME) = str
     let print ip entry acc =
       let key = Ipaddr.V4.to_string ip in
       match entry with
-       | Pending _ -> acc ^ "\n" ^ key ^ " -> " ^ "Pending" 
-       | Confirmed (time, mac) -> Printf.sprintf "%s\n%s -> Confirmed (%s) (expires %f)\n%!" 
+       | Pending _ -> acc ^ "\n" ^ key ^ " -> " ^ "Pending"
+       | Confirmed (time, mac) -> Printf.sprintf "%s\n%s -> Confirmed (%s) (expires %f)\n%!"
                                     acc key (Macaddr.to_string mac) time
     in
     Lwt.return (Hashtbl.fold print t.cache "")
@@ -141,15 +141,15 @@ module Make (Ethif : V1_LWT.ETHIF) (Clock : V1.CLOCK) (Time : V1_LWT.TIME) = str
     Wire_structs.set_ethernet_src smac 0 buf;
     Wire_structs.set_ethernet_ethertype buf 0x0806; (* ARP *)
     let arpbuf = Cstruct.shift buf 14 in
-    set_arp_htype arpbuf 1;
-    set_arp_ptype arpbuf 0x0800; (* IPv4 *)
-    set_arp_hlen arpbuf 6; (* ethernet mac size *)
-    set_arp_plen arpbuf 4; (* ipv4 size *)
-    set_arp_op arpbuf op;
-    set_arp_sha smac 0 arpbuf;
-    set_arp_spa arpbuf spa;
-    set_arp_tha dmac 0 arpbuf;
-    set_arp_tpa arpbuf tpa;
+    set_arp_htype arpbuf  1;
+    set_arp_ptype arpbuf  0x0800; (* IPv4 *)
+    set_arp_hlen  arpbuf  6;      (* ethernet mac size *)
+    set_arp_plen  arpbuf  4;      (* ipv4 size *)
+    set_arp_op    arpbuf  op;
+    set_arp_sha   smac    0       arpbuf;
+    set_arp_spa   arpbuf  spa;
+    set_arp_tha   dmac    0       arpbuf;
+    set_arp_tpa   arpbuf  tpa;
     (* Resize buffer to sizeof arp packet *)
     let buf = Cstruct.sub buf 0 (sizeof_arp + Wire_structs.sizeof_ethernet) in
     Ethif.write t.ethif buf

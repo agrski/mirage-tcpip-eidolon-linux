@@ -19,10 +19,10 @@ open Lwt.Infix
 
 module Make(Netif : V1_LWT.NETWORK) = struct
 
-  type 'a io = 'a Lwt.t
-  type buffer = Cstruct.t
-  type macaddr = Macaddr.t
-  type netif = Netif.t
+  type 'a io    = 'a Lwt.t
+  type buffer   = Cstruct.t
+  type macaddr  = Macaddr.t
+  type netif    = Netif.t
 
   type error = [
     | `Unknown of string
@@ -34,9 +34,10 @@ module Make(Netif : V1_LWT.NETWORK) = struct
     netif: Netif.t;
   }
 
-  let id t = t.netif
+  let id t  = t.netif
   let mac t = Netif.mac t.netif
 
+(* HERE Where is this called from? Doesn't seem to do anything with TCP though *)
   let input ~arpv4 ~ipv4 ~ipv6 t frame =
     MProf.Trace.label "ethif.input";
     let of_interest dest =
@@ -46,10 +47,10 @@ module Make(Netif : V1_LWT.NETWORK) = struct
     | Some (typ, destination, payload) when of_interest destination ->
       begin
         match typ with
-        | Some Wire_structs.ARP -> arpv4 payload
-        | Some Wire_structs.IPv4 -> ipv4 payload
-        | Some Wire_structs.IPv6 -> ipv6 payload
-        | None -> Lwt.return_unit (* TODO: default ethertype payload handler *)
+        | Some Wire_structs.ARP   -> arpv4 payload
+        | Some Wire_structs.IPv4  -> ipv4 payload
+        | Some Wire_structs.IPv6  -> ipv6 payload
+        | None                    -> Lwt.return_unit (* TODO: default ethertype payload handler *)
       end
     | _ -> Lwt.return_unit
 

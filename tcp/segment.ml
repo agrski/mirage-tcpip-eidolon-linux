@@ -108,7 +108,8 @@ module Rx(Time:V1_LWT.TIME) = struct
     in
     Log.pp_print_list pp_v fmt (S.elements t.segs)
 
-  (* If there is a FIN flag at the end of this segment set.  TODO:
+  (* If there is a FIN flag at the end of this segment set.
+     TODO:
      should look for a FIN and chop off the rest of the set as they
      may be orphan segments *)
   let fin q =
@@ -228,9 +229,9 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
     seq:Sequence.t -> Cstruct.t list -> unit Lwt.t
 
   type seg = {
-    data: Cstruct.t list;
-    flags: tx_flags;
-    seq: Sequence.t;
+    data:   Cstruct.t list;
+    flags:  tx_flags;
+    seq:    Sequence.t;
   }
 
   (* Sequence length of the segment *)
@@ -242,14 +243,14 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
 
   (* Queue of pre-transmission segments *)
   type t = {
-    segs: seg Lwt_sequence.t;      (* Retransmitted segment queue *)
-    xmit: xmit;                    (* Transmit packet to the wire *)
-    rx_ack: Sequence.t Lwt_mvar.t; (* RX Ack thread that we've sent one *)
-    wnd: Window.t;                 (* TCP Window information *)
-    state: State.t;
-    tx_wnd_update: int Lwt_mvar.t; (* Received updates to the transmit window *)
-    rexmit_timer: Tcptimer.t;      (* Retransmission timer for this connection *)
-    mutable dup_acks: int;         (* dup ack count for re-xmits *)
+    segs:             seg Lwt_sequence.t;       (* Retransmitted segment queue *)
+    xmit:             xmit;                     (* Transmit packet to the wire *)
+    rx_ack:           Sequence.t Lwt_mvar.t;    (* RX Ack thread that we've sent one *)
+    wnd:              Window.t;                 (* TCP Window information *)
+    state:            State.t;
+    tx_wnd_update:    int Lwt_mvar.t;           (* Received updates to the transmit window *)
+    rexmit_timer:     Tcptimer.t;               (* Retransmission timer for this connection *)
+    mutable dup_acks: int;                      (* dup ack count for re-xmits *)
   }
 
   let pp_seg fmt seg =
@@ -277,6 +278,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
         | Some rexmit_seg ->
           match rexmit_seg.seq = seq with
           | false ->
+            (* Not the desired sequence number *)
             Log.f debug (fun fmt ->
                 Log.pf fmt "PUSHING TIMER - new time=%f, new seq=%a"
                   (Window.rto wnd) Sequence.pp rexmit_seg.seq);
@@ -285,13 +287,17 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
             in
             Lwt.return ret
           | true ->
+            (* Found the right sequence number to try re-txing *)
             if (Window.max_rexmits_done wnd) then (
+              (* Timeout *)
               (* TODO - include more in log msg like ipaddrs *)
               Log.s info "Max retransmits reached for connection - terminating";
               StateTick.tick st State.Timeout;
               Lwt.return Tcptimer.Stoptimer
             ) else (
+              (* Retransmit *)
               let flags = rexmit_seg.flags in
+(* HERE No options given at all - hopefully don't need to handle rtx though *)
               let options = [] in (* TODO: put the right options *)
               Log.f info (fun fmt ->
                   Log.pf fmt "TCP retransmission on timer seq = %d"
@@ -352,6 +358,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
                   Sequence.pp rexmit_seg.seq Sequence.pp seq);
             let { wnd; _ } = q in
             let flags=rexmit_seg.flags in
+(* HERE Once again, no options at all - hopefully don't need to touch *)
             let options=[] in (* TODO: put the right options *)
             Lwt.async
               (fun () -> q.xmit ~flags ~wnd ~options ~seq rexmit_seg.data);
@@ -405,7 +412,9 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
        - The wire transmit function blocks.
      The transmitter should check that the segment size will
      will not be greater than the transmit window.
-  *)
+   *)
+(* HERE Where do options get passed in? *)
+(* Options passed in from at least /tcp/pcb.ml *)
   let output ?(flags=No_flags) ?(options=[]) q data =
     (* Transmit the packet to the wire
          TODO: deal with transmission soft/hard errors here RFC5461 *)

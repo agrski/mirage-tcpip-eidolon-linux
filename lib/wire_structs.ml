@@ -4,6 +4,7 @@ cstruct ethernet {
     uint16_t       ethertype
   } as big_endian
 
+(* Fits in with above uint16_t ethertype - defines type *)
 cenum ethertype {
     ARP  = 0x0806;
     IPv4 = 0x0800;
@@ -29,12 +30,14 @@ cstruct udp {
     uint16_t checksum
   } as big_endian
 
+(* HERE Defines IPv4 header *)
 module Ipv4_wire = struct
   cstruct ipv4 {
       uint8_t        hlen_version;
       uint8_t        tos;
       uint16_t       len;
       uint16_t       id;
+(*    uint8_t        flags; *)  (* In fact flags is 3 bits - 0=reserved, must be 0, 1=DF, 2 = MF (more frags *)
       uint16_t       off;
       uint8_t        ttl;
       uint8_t        proto;
@@ -43,6 +46,7 @@ module Ipv4_wire = struct
       uint32_t       dst
     } as big_endian
 
+(* HERE Defines ICMP header *)
   cstruct icmpv4 {
       uint8_t ty;
       uint8_t code;
@@ -63,6 +67,7 @@ module Ipv4_wire = struct
     | `UDP    -> 17
 end
 
+(* HERE Defines TCP header *)
 module Tcp_wire = struct
   cstruct tcp {
       uint16_t src_port;
@@ -84,6 +89,10 @@ module Tcp_wire = struct
       uint16_t len
     } as big_endian
 
+(* HERE
+    May need to modify this behaviour
+    What behaviour ~exactly~ does get_tcp_dataoff | set_tcp_dataoff have?
+*)
   (* XXX note that we overwrite the lower half of dataoff
    * with 0, so be careful when implemented CWE flag which
    * sits there *)

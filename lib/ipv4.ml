@@ -25,20 +25,20 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
     | `Unimplemented     (** operation not yet implemented in the code *)
   ]
 
-  type ethif = Ethif.t
-  type 'a io = 'a Lwt.t
-  type buffer = Cstruct.t
-  type ipaddr = Ipaddr.V4.t
-  type prefix = Ipaddr.V4.t
+  type ethif    = Ethif.t
+  type 'a io    = 'a Lwt.t
+  type buffer   = Cstruct.t
+  type ipaddr   = Ipaddr.V4.t
+  type prefix   = Ipaddr.V4.t
   type callback = src:ipaddr -> dst:ipaddr -> buffer -> unit Lwt.t
-  type macaddr = Ethif.macaddr
+  type macaddr  = Ethif.macaddr
 
   type t = {
-    ethif : Ethif.t;
-    arp : Arpv4.t;
-    mutable ip: Ipaddr.V4.t;
-    mutable netmask: Ipaddr.V4.t;
-    mutable gateways: Ipaddr.V4.t list;
+    ethif             : Ethif.t;
+    arp               : Arpv4.t;
+    mutable ip        : Ipaddr.V4.t;
+    mutable netmask   : Ipaddr.V4.t;
+    mutable gateways  : Ipaddr.V4.t list;
   }
 
   let input_arpv4 t buf =
@@ -54,6 +54,7 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
       let ipand a b = Int32.logand (Ipaddr.V4.to_int32 a) (Ipaddr.V4.to_int32 b) in
       (ipand t.ip t.netmask) = (ipand ip t.netmask)
 
+(* HERE Unlikely, but may need to break RFC to spoof *)
     (* RFC 1112: 01-00-5E-00-00-00 ORed with lower 23 bits of the ip address *)
     let mac_of_multicast ip =
       let ipb = Ipaddr.V4.to_bytes ip in
@@ -79,6 +80,7 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
         Lwt.return (mac_of_multicast ip)
       |ip -> begin (* Gateway *)
           match t.gateways with
+(* HERE Why do we only check hd of list? *)
           |hd::_ ->
             Arpv4.query t.arp hd >>= begin function
               | `Ok mac -> Lwt.return mac
@@ -92,6 +94,7 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
         end
   end
 
+(* HERE Where do params get passed in from? Some values set here *)
   let adjust_output_header ~dmac ~tlen frame =
     Wire_structs.set_ethernet_dst dmac 0 frame;
     let buf = Cstruct.sub frame Wire_structs.sizeof_ethernet Wire_structs.Ipv4_wire.sizeof_ipv4 in
@@ -102,17 +105,28 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
     let checksum = Tcpip_checksum.ones_complement buf in
     Wire_structs.Ipv4_wire.set_ipv4_csum buf checksum
 
-  let allocate_frame t ~dst ~proto =
+  let allocate_frame t ~dst ~proto (* ~df *) =
     let ethernet_frame = Io_page.to_cstruct (Io_page.get 1) in
     let smac = Macaddr.to_bytes (Ethif.mac t.ethif) in
     Wire_structs.set_ethernet_src smac 0 ethernet_frame;
     Wire_structs.set_ethernet_ethertype ethernet_frame 0x0800;
     let buf = Cstruct.shift ethernet_frame Wire_structs.sizeof_ethernet in
+(* HERE
+    Values here may need adjustment.
+    IPv4 values may need to be changed to fit in with spoofed OS
+    Appears to not handle IPv4 options yet - may need to handle this myself,
+      inc. correct shifts.
+*)
     (* Write the constant IPv4 header fields *)
     Wire_structs.Ipv4_wire.set_ipv4_hlen_version buf ((4 lsl 4) + (5)); (* TODO options *)
     Wire_structs.Ipv4_wire.set_ipv4_tos buf 0;
-    Wire_structs.Ipv4_wire.set_ipv4_off buf 0; (* TODO fragmentation *)
-    Wire_structs.Ipv4_wire.set_ipv4_ttl buf 38; (* TODO *)
+(* HERE Don't fragment as part of offset (16 bits together) *)
+(*    if df then
+      Wire_structs.Ipv4_wire.set_ipv4_off buf (1 lsl 14);     (* Sets DF bit *)
+    else
+*)
+      Wire_structs.Ipv4_wire.set_ipv4_off buf 0;                (* Leaves DF unset *)
+    Wire_structs.Ipv4_wire.set_ipv4_ttl buf 40; (* TODO *)              (* HERE *)
     let proto = Wire_structs.Ipv4_wire.protocol_to_int proto in
     Wire_structs.Ipv4_wire.set_ipv4_proto buf proto;
     Wire_structs.Ipv4_wire.set_ipv4_src buf (Ipaddr.V4.to_int32 t.ip);
@@ -155,6 +169,11 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
     printf "ICMP Destination Unreachable: %s\n%!" descr;
     Lwt.return_unit
 
+(* HERE
+    If need to affect ICMP, here is a useful place.
+    This mostly sends what what got sent to it.
+    Thus, if need to send back something different, have to do it here
+ *)
   let icmp_input t src _hdr buf =
     MProf.Trace.label "icmp_input";
     match Wire_structs.Ipv4_wire.get_icmpv4_ty buf with
@@ -199,7 +218,9 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
   let connect
       ?(ip=Ipaddr.V4.any)
       ?(netmask=Ipaddr.V4.any)
-      ?(gateways=[]) ethif arp =
+      ?(gateways=[])
+      ethif
+      arp =
     let t = { ethif; arp; ip; netmask; gateways } in
     Lwt.return (`Ok t)
 

@@ -14,6 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
+(*
+ * Profiler
+ *
+ * Profiler for timing
+ *)
+
 open Printf
 
 let lastprinttime = ref (Clock.time ())
@@ -39,7 +45,8 @@ let start s =
   | Some p ->
     if p.on then begin
       printf "Profiler error: %s was running and started again - ignoring start\n%!" s
-    end else begin
+    end
+    else begin
       p.on <- true;
       p.start <- (Clock.time ());
     end

@@ -117,6 +117,7 @@ module Make(Time:V1_LWT.TIME) = struct
     t.on_close ();
     Lwt.return_unit
 
+(* How TCP evolves - state changes *)
   let tick t (i:action) =
     let diffone x y = Sequence.incr y = x in
     let tstr s (i:action) =

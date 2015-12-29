@@ -18,11 +18,11 @@ open Lwt.Infix
 
 module Make(Ip: V1_LWT.IP) = struct
 
-  type 'a io = 'a Lwt.t
-  type buffer = Cstruct.t
-  type ip = Ip.t
-  type ipaddr = Ip.ipaddr
-  type ipinput = src:ipaddr -> dst:ipaddr -> buffer -> unit io
+  type 'a io    = 'a Lwt.t
+  type buffer   = Cstruct.t
+  type ip       = Ip.t
+  type ipaddr   = Ip.ipaddr
+  type ipinput  = src:ipaddr -> dst:ipaddr -> buffer -> unit io
   type callback = src:ipaddr -> dst:ipaddr -> src_port:int -> Cstruct.t -> unit Lwt.t
 
   (** IO operation errors *)
@@ -36,6 +36,11 @@ module Make(Ip: V1_LWT.IP) = struct
 
   let id {ip} = ip
 
+(* HERE
+    Following funcs put some stuff together.
+    Called from where?
+    Where do params come from?
+ *)
   (* FIXME: [t] is not taken into account at all? *)
   let input ~listeners _t ~src ~dst buf =
     let dst_port = Wire_structs.get_udp_dest_port buf in

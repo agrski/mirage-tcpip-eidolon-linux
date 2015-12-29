@@ -19,17 +19,17 @@ open Lwt.Infix
 open Printf
 
 module Make (Console : V1_LWT.CONSOLE)
-    (Time : V1_LWT.TIME)
+    (Time   : V1_LWT.TIME)
     (Random : V1.RANDOM)
-    (Udp : V1_LWT.UDPV4) = struct
+    (Udp    : V1_LWT.UDPV4) = struct
 
   type offer = {
-    ip_addr: Ipaddr.V4.t;
-    netmask: Ipaddr.V4.t option;
-    gateways: Ipaddr.V4.t list;
-    dns: Ipaddr.V4.t list;
-    lease: int32;
-    xid: int32;
+    ip_addr   : Ipaddr.V4.t;
+    netmask   : Ipaddr.V4.t option;
+    gateways  : Ipaddr.V4.t list;
+    dns       : Ipaddr.V4.t list;
+    lease     : int32;
+    xid       : int32;
   }
 
   type state =
@@ -40,36 +40,37 @@ module Make (Console : V1_LWT.CONSOLE)
     | Shutting_down
 
   type t = {
-    c: Console.t;
-    udp: Udp.t;
-    mac: Macaddr.t;
-    mutable state: state;
-    new_offer: offer -> unit Lwt.t;
+    c             : Console.t;
+    udp           : Udp.t;
+    mac           : Macaddr.t;
+    mutable state : state;
+    new_offer     : offer -> unit Lwt.t;
   }
 
   cstruct dhcp {
-      uint8_t op;
-      uint8_t htype;
-      uint8_t hlen;
-      uint8_t hops;
-      uint32_t xid;
-      uint16_t secs;
-      uint16_t flags;
-      uint32_t ciaddr;
-      uint32_t yiaddr;
-      uint32_t siaddr;
-      uint32_t giaddr;
-      uint8_t chaddr[16];
-      uint8_t sname[64];
-      uint8_t file[128];
-      uint32_t cookie
-    } as big_endian
+    uint8_t   op;
+    uint8_t   htype;
+    uint8_t   hlen;
+    uint8_t   hops;
+    uint32_t  xid;
+    uint16_t  secs;
+    uint16_t  flags;
+    uint32_t  ciaddr;
+    uint32_t  yiaddr;
+    uint32_t  siaddr;
+    uint32_t  giaddr;
+    uint8_t   chaddr[16];
+    uint8_t   sname[64];
+    uint8_t   file[128];
+    uint32_t  cookie
+  } as big_endian
 
-      cenum mode {
-      BootRequest = 1;
-      BootReply
-    } as uint8_t
+  cenum mode {
+    BootRequest = 1;
+    BootReply
+  } as uint8_t
 
+(* HERE Sets some options, but suspect purely DHCP, rather than TCP/IP *)
   (* Send a client broadcast packet *)
   let output_broadcast t ~xid ~yiaddr ~siaddr ~options =
     let options = Dhcpv4_option.Packet.to_bytes options in

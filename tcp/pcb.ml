@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
+(* PCB = Process Control Block = controller *)
+
 open Lwt.Infix
 
 type error = [`Bad_state of State.tcpstate]
@@ -98,10 +100,14 @@ struct
 
   let verify_checksum _ _ _ = true
 
-  let wscale_default = 2
+(* HERE change made *)
+  let wscale_default = 0 (* originally, 2 *)
+  let rx_wnd_default = 32_736 (* 0x7fe0 *)
+  let mss_default    = 536 (* 0x218 *)
 
   module Tx = struct
 
+(* HERE May be of use - e.g. setting flags *)
     (* Output a TCP packet, and calculate some settings from a state descriptor *)
     let xmit_pcb ip id ~flags ~wnd ~options ~seq datav =
       let window = Int32.to_int (Window.rx_wnd_unscaled wnd) in
@@ -112,6 +118,7 @@ struct
       let psh = match flags with Segment.Psh -> true | _ -> false in
       WIRE.xmit ~ip ~id ~syn ~fin ~rst ~psh ~rx_ack ~seq ~window ~options datav
 
+(* HERE May be of use in handling RSTs specially *)
     (* Output an RST response when we dont have a PCB *)
     let send_rst { ip; _ } id ~sequence ~ack_number ~syn ~fin =
       let datalen = Int32.add (if syn then 1l else 0l) (if fin then 1l else 0l) in
@@ -121,6 +128,7 @@ struct
       let rx_ack = Some (Sequence.of_int32 (Int32.add sequence datalen)) in
       WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options []
 
+(* HERE May need to modify SYN packets *)
     (* Output a SYN packet *)
     let send_syn { ip; _ } id ~tx_isn ~options ~window =
       WIRE.xmit ~ip ~id ~syn:true ~rx_ack:None ~seq:tx_isn ~window ~options []
@@ -140,6 +148,7 @@ struct
             Log.pf fmt "TX.close: skipping, state=%a" State.pp pcb.state);
         Lwt.return_unit
 
+(* HERE This responds with ACKs - may be useful *)
     (* Thread that transmits ACKs in response to received packets,
        thus telling the other side that more can be sent, and
        also data from the user transmit queue *)
@@ -150,6 +159,7 @@ struct
       let rec send_empty_ack () =
         Lwt_mvar.take send_ack >>= fun _ ->
         let ack_number = Window.rx_nxt wnd in
+(* HERE May want to set flags + options *)
         let flags = Segment.No_flags in
         let options = [] in
         let seq = Window.tx_nxt wnd in
@@ -164,6 +174,8 @@ struct
       send_empty_ack () <&> (notify ())
   end
 
+(* Module Rx is useful for checking what is being input -
+    can then try to match outputs with it *)
   module Rx = struct
 
     (* Process an incoming TCP packet that has an active PCB *)
@@ -185,6 +197,7 @@ struct
       (* Coalesce any outstanding segments and retrieve ready segments *)
       RXS.input rxq seg
 
+(* HERE Possibly useful - in terms of how to respond to received packets *)
     (* Thread that spools the data into an application receive buffer,
        and notifies the ACK subsystem that new data is here *)
     let thread (pcb:pcb) ~rx_data =
@@ -267,11 +280,12 @@ struct
       | None ->
         Log.s debug "error in removing pcb - no such connection"
 
-  let pcb_allocs = ref 0
-  let th_allocs = ref 0
-  let pcb_frees = ref 0
-  let th_frees = ref 0
+  let pcb_allocs  = ref 0
+  let th_allocs   = ref 0
+  let pcb_frees   = ref 0
+  let th_frees    = ref 0
 
+(* Works through options list until it finds scaling or handles not finding it *)
   let resolve_wnd_scaling options rx_wnd_scaleoffer =
     let tx_wnd_scale = List.fold_left (fun a ->
         function Options.Window_size_shift m -> Some m | _ -> a
@@ -290,6 +304,7 @@ struct
       rx_wnd: int;
       rx_wnd_scaleoffer: int }
 
+(* HERE Would be useful to know where this is called - sets options, etc *)
   let new_pcb t params id =
     let { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer } =
       params
@@ -304,9 +319,10 @@ struct
     (* Set up the windowing variables *)
     let rx_isn = Sequence.of_int32 sequence in
     (* Initialise the window handler *)
+(* HERE Could try hard-coding a default value for rx_wnd here - 0x7fe0 = 32_736*)
     let wnd =
-      Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd ~tx_wnd ~rx_isn ~tx_mss
-        ~tx_isn
+      Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd:rx_wnd_default (* 0x7fe0 *) ~tx_wnd
+        ~rx_isn ~tx_mss ~tx_isn
     in
     (* When we transmit an ACK for a received segment, rx_ack is written to *)
     let rx_ack = MProf.Trace.named_mvar_empty "rx_ack" in
@@ -324,15 +340,18 @@ struct
     (* Set up transmit and receive queues *)
     let on_close () = clearpcb t id tx_isn in
     let state = State.t ~on_close in
+(* HERE Use of ~xmit *)
     let txq, _tx_t =
       TXS.create ~xmit:(Tx.xmit_pcb t.ip id) ~wnd ~state ~rx_ack ~tx_ack ~tx_wnd_update
     in
     (* The user application transmit buffer *)
+(* HERE May need to edit ~max_size *)
     let utx = UTX.create ~wnd ~txq ~max_size:16384l in
     let rxq = RXS.create ~rx_data ~wnd ~state ~tx_ack in
     (* Set up ACK module *)
     let ack = ACK.t ~send_ack ~last:(Sequence.incr rx_isn) in
     (* Construct basic PCB in Syn_received state *)
+(* HERE Setting up a PCB - may need to edit params going in here *)
     let pcb = { state; rxq; txq; wnd; id; ack; urx; utx } in
     (* Compose the overall thread from the various tx/rx threads
        and the main listener function *)
@@ -359,8 +378,10 @@ struct
     Gc.finalise fnth th;
     Lwt.return (pcb, th, opts)
 
+(* HERE Setting up a server - where do params come from? *)
   let new_server_connection t params id pushf =
     Log.f debug (with_stats "new-server-connection" t);
+(* HERE Use of new_pcb should be fine if correct params set in there *)
     new_pcb t params id >>= fun (pcb, th, opts) ->
     STATE.tick pcb.state State.Passive_open;
     STATE.tick pcb.state (State.Send_synack params.tx_isn);
@@ -373,16 +394,41 @@ struct
     Hashtbl.add t.listens id (params.tx_isn, (pushf, (pcb, th)));
     Stats.incr_listen ();
     (* Queue a SYN ACK for transmission *)
-    let options = Options.MSS 1460 :: opts in
+(* HERE Sets a value for MSS - may need to modify from  1460 *)
+(* MSS value may have been set in opts already - need to check:
+    If set, leave it alone (otherwise overwrites to always use mss_default
+    If not, set to mss_default
+ *)
+(*
+    let options = if List.mem (Options.MSS _) opts
+                  then opts
+                  else Options.MSS mss_default :: opts in
+*)
+    let mss_val = List.fold_left (fun a -> function
+      | Options.MSS m -> Some m
+      | _ -> a)
+      None opts
+    in
+    let options =
+      match mss_val with
+        | Some m  -> opts                               (* MSS already set *)
+        | None    -> Options.MSS mss_default :: opts    (* MSS not yet set *)
+    in
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
 
+(* Looks like it sets up a connection as a client - active-open end *)
+(* Apparently SYN has already been sent, so this func only sends ACK *)
+(* HERE Where is this called? Where do params come from? *)
   let new_client_connection t params id ack_number =
     Log.f debug (with_stats "new-client-connection" t);
     let tx_isn = params.tx_isn in
+(* HERE Increments tx ISN - is this related between tcp/icmp? May need to modify *)
     let params = { params with tx_isn = Sequence.incr tx_isn } in
+(* Use of new_pcb should be fine if correct params set in there *)
+(* HERE Ignores options returned from new_pcb call - may need to revert to use these *)
     new_pcb t params id >>= fun (pcb, th, _) ->
-    (* A hack here because we create the pcb only after the SYN-ACK is rx-ed*)
+    (* A hack here because we create the pcb only after the SYN-ACK is rx-ed *)
     STATE.tick pcb.state (State.Send_syn tx_isn);
     (* Add the PCB to our connection table *)
     Hashtbl.add t.channels id (pcb, th);
@@ -396,6 +442,7 @@ struct
     Log.f debug (with_stats "process-reset" t);
     match hashtbl_find t.connects id with
     | Some (wakener, _) ->
+(* May be a genuine RST - security hole here, hence URG_TODO *)
       (* URG_TODO: check if RST ack num is valid before it is accepted *)
       Hashtbl.remove t.connects id;
       Stats.decr_connect ();
@@ -404,15 +451,18 @@ struct
     | None ->
       match hashtbl_find t.listens id with
       | Some (_, (_, (pcb, th))) ->
+        (* Still a valid RST probably *)
         Hashtbl.remove t.listens id;
         Stats.decr_listen ();
         STATE.tick pcb.state State.Recv_rst;
         Lwt.cancel th;
         Lwt.return_unit
       | None ->
+        (* Looks like a spurious RST *)
         (* Incoming RST possibly to listen port - ignore per RFC793 pg65 *)
         Lwt.return_unit
 
+(* HERE Have received a syn-ack, so process this? *)
   let process_synack t id ~pkt ~ack_number ~sequence ~options ~syn ~fin =
     Log.f debug (with_stats "process-synack" t);
     match hashtbl_find t.connects id with
@@ -421,9 +471,12 @@ struct
         Hashtbl.remove t.connects id;
         Stats.decr_connect ();
         let tx_wnd = Tcp_wire.get_tcp_window pkt in
-        let rx_wnd = 65535 in
+(* HERE Maybe need to change this window value *)
+(* Was rx_wnd = 65535 = 0xFFFF *)
+        let rx_wnd = rx_wnd_default (* = 0x7fe0 *) in
         (* TODO: fix hardcoded value - it assumes that this value was
            sent in the SYN *)
+(* Modified by changing wscale_default; was changed from 2 to 0 *)
         let rx_wnd_scaleoffer = wscale_default in
         new_client_connection t
           { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
@@ -432,6 +485,7 @@ struct
         Lwt.wakeup wakener (`Ok (pcb, th));
         Lwt.return_unit
       ) else
+(* HERE May choose to turn this into a RST *)
         (* Normally sending a RST reply to a random pkt would be in
            order but here we stay quiet since we are actively trying
            to connect this id *)
@@ -439,25 +493,46 @@ struct
     | None ->
       (* Incomming SYN-ACK with no pending connect and no matching pcb
          - send RST *)
+(* HERE This sends a RST - may wish to edit params here *)
       Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
 
+(* HERE
+ * This looks like important control logic.
+ * For handling incoming connections.
+ * Looks like lots of things to edit here!
+ *)
   let process_syn t id ~listeners ~pkt ~ack_number ~sequence ~options ~syn ~fin =
     Log.f debug (with_stats "process-syn" t);
     match listeners id.WIRE.local_port with
     | Some pushf ->
+(* HERE May want to make this less random! *)
       let tx_isn = Sequence.of_int ((Random.int 65535) + 0x1AFE0000) in
       let tx_wnd = Tcp_wire.get_tcp_window pkt in
+(* HERE May want to make rx_wnd different *)
       (* TODO: make this configurable per listener *)
-      let rx_wnd = 65535 in
+      let rx_wnd = rx_wnd_default in
+(* HERE scaleoffer should already be set to right value *)
       let rx_wnd_scaleoffer = wscale_default in
+(* HERE Do we really want to use options, etc passed in?
+ * Where are they set?
+ * In incoming syn packet? From other control logic?
+ *)
       new_server_connection t
         { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
         id pushf
       >>= fun _ ->
       Lwt.return_unit
+(* HERE RST values may need to be modified, if can't modify in whatever control logic
+ * calls this function
+ *)
     | None ->
       Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
 
+(* HERE *)
+(* Looks like listener sets up passive connection, with handshake
+ * then active channel handles it OR
+ * connects sets up active connection, then active channel handles it
+ *)
   let process_ack t id ~pkt ~ack_number ~sequence ~syn ~fin =
     Log.f debug (with_stats "process-ack" t);
     match hashtbl_find t.listens id with
@@ -480,15 +555,21 @@ struct
       | Some _ ->
         (* No RST because we are trying to connect on this id *)
         Lwt.return_unit
+(* HERE Following RST may need params tweaked? *)
       | None ->
         (* ACK but no matching pcb and no listen - send RST *)
         Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
 
+(* HERE
+ * Calls other functions, e.g. process_syn and process_synack
+ * So, may need to find where this is called to find control logic for params
+ *)
   let input_no_pcb t listeners pkt id =
     match Tcp_wire.get_rst pkt with
     | true -> process_reset t id
     | false ->
       let sequence = Tcp_wire.get_tcp_sequence pkt in
+(* HERE Takes options from incoming packet - edit these as necessary *)
       let options = Wire.get_options pkt in
       let ack_number = Tcp_wire.get_tcp_ack_number pkt in
       let syn = Tcp_wire.get_syn pkt in
@@ -505,8 +586,13 @@ struct
         Log.s debug "input-no-pcb: unknown packet";
         Lwt.return_unit
 
+(* HERE
+ * Calls either Rx.input | input_no_pcb
+ * Therefore, fairly high-level in stack
+ *)
   (* Main input function for TCP packets *)
   let input t ~listeners ~src ~dst data =
+    (* Looks like data = (pkt, id) given use with input_no_pcb *)
     match verify_checksum src dst data with
     | false ->
       Log.s debug "RX.input: checksum error";
@@ -580,6 +666,7 @@ struct
     in
     let inuse t id = islistener t id.WIRE.local_port || idinuse t id in
     let rec bumpport t =
+(* Wraps around available ports *)
       (match t.localport with
        | 65535 -> t.localport <- 10000
        | _ -> t.localport <- t.localport + 1);
@@ -593,6 +680,8 @@ struct
     in
     bumpport t
 
+(* HERE Has options - where are they passed in from? *)
+(* Called from at least connect - i.e. next function *)
   (* SYN retransmission timer *)
   let rec connecttimer t id tx_isn options window count =
     let rxtime = match count with
@@ -614,15 +703,24 @@ struct
         )
       else Lwt.return_unit
 
+(* HERE
+ * Looks like IP rather than TCP
+ * May need to modify hard-coded values, e.g. tx_isn
+ *)
   let connect t ~dest_ip ~dest_port =
     let id = getid t dest_ip dest_port in
+(* HERE ISN # - may modify *)
     let tx_isn = Sequence.of_int ((Random.int 65535) + 0x1BCD0000) in
     (* TODO: This is hardcoded for now - make it configurable *)
     let rx_wnd_scaleoffer = wscale_default in
+(* HERE OPTIONS SET *)
+(* MSS - originally 1460, now 536 = 0x218 *)
     let options =
-      Options.MSS 1460 :: Options.Window_size_shift rx_wnd_scaleoffer :: []
+      Options.MSS 536 :: Options.Window_size_shift rx_wnd_scaleoffer :: []
     in
-    let window = 5840 in
+(* HERE This may be where to change window size - 7fe0 = 32736 *)
+(* originally, let window = 5840 *)
+    let window = rx_wnd_default in
     let th, wakener = MProf.Trace.named_task "TCP connect" in
     if Hashtbl.mem t.connects id then (
       Log.s info "WARNING: connection already being attempted";

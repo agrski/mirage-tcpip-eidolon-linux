@@ -23,6 +23,7 @@ type t = {
   mutable stats: bool;
 }
 
+(* Number of connections made during this session *)
 let c = ref 0
 
 let write pp =

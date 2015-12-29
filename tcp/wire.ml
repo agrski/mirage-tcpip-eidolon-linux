@@ -26,6 +26,7 @@ let get_options buf =
   if Tcp_wire.get_data_offset buf > 20 then
     Options.unmarshal (Cstruct.shift buf Tcp_wire.sizeof_tcp) else []
 
+(* HERE Where is this called from? *)
 let set_options buf ts =
   Options.marshal buf ts
 
@@ -34,12 +35,16 @@ let get_payload buf =
 
 module Make (Ip:V1_LWT.IP) = struct
   type id = {
-    dest_port: int;               (* Remote TCP port *)
-    dest_ip: Ip.ipaddr;         (* Remote IP address *)
+    dest_port:  int;              (* Remote TCP port *)
+    dest_ip:    Ip.ipaddr;        (* Remote IP address *)
     local_port: int;              (* Local TCP port *)
-    local_ip: Ip.ipaddr;        (* Local IP address *)
+    local_ip:   Ip.ipaddr;        (* Local IP address *)
   }
 
+(* HERE What calls this - where do params get passed in? *)
+(* Also, may have to modify size of some of the things here - e.g. to account
+    for unusual options specifications which leave space
+ *)
   let xmit ~ip ~id ?(rst=false) ?(syn=false) ?(fin=false) ?(psh=false)
       ~rx_ack ~seq ~window ~options datav =
     (* Make a TCP/IP header frame *)
@@ -58,14 +63,17 @@ module Make (Ip:V1_LWT.IP) = struct
     let frame = Cstruct.set_len frame (header_len + Tcp_wire.sizeof_tcp + options_len) in
     let sequence = Sequence.to_int32 seq in
     let ack_number =
-      match rx_ack with Some n -> Sequence.to_int32 n |None -> 0l
+      match rx_ack with Some n -> Sequence.to_int32 n | None -> 0l
     in
+(* HERE Following section may require modification *)
+    (* Looks like 32-bit -> 8-bit conversion here *)
     let data_off = (Tcp_wire.sizeof_tcp / 4) + (options_len / 4) in
     Tcp_wire.set_tcp_src_port tcp_frame id.local_port;
     Tcp_wire.set_tcp_dst_port tcp_frame id.dest_port;
     Tcp_wire.set_tcp_sequence tcp_frame sequence;
     Tcp_wire.set_tcp_ack_number tcp_frame ack_number;
     Tcp_wire.set_data_offset tcp_frame data_off;
+(* HERE May need to set tcp_flags to something else *)
     Tcp_wire.set_tcp_flags tcp_frame 0;
     if rx_ack <> None then Tcp_wire.set_ack tcp_frame;
     if rst then Tcp_wire.set_rst tcp_frame;
@@ -73,7 +81,9 @@ module Make (Ip:V1_LWT.IP) = struct
     if fin then Tcp_wire.set_fin tcp_frame;
     if psh then Tcp_wire.set_psh tcp_frame;
     Tcp_wire.set_tcp_window tcp_frame window;
+(* HERE TCP checksum may need modification *)
     Tcp_wire.set_tcp_checksum tcp_frame 0;
+(* HERE URG pointer may need to be set *)
     Tcp_wire.set_tcp_urg_ptr tcp_frame 0;
     let checksum = Ip.checksum frame (tcp_frame :: datav) in
     Tcp_wire.set_tcp_checksum tcp_frame checksum;

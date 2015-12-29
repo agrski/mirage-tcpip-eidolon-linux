@@ -17,48 +17,49 @@
 let debug = Log.create "Window"
 
 type t = {
-  tx_mss: int;
-  tx_isn: Sequence.t;
-  rx_isn: Sequence.t;
-  max_rx_wnd: int32;               (* Max RX Window size after scaling *)
+  tx_mss:       int;
+  tx_isn:       Sequence.t;
+  rx_isn:       Sequence.t;
+  max_rx_wnd:   int32;             (* Max RX Window size after scaling *)
   tx_wnd_scale: int;               (* TX Window scaling option     *)
   rx_wnd_scale: int;               (* RX Window scaling option     *)
 
   mutable ack_serviced: bool;
-  mutable ack_seq: Sequence.t;
-  mutable ack_win: int;
+  mutable ack_seq:      Sequence.t;
+  mutable ack_win:      int;
 
-  mutable snd_una: Sequence.t;
-  mutable tx_nxt: Sequence.t;
-  mutable rx_nxt: Sequence.t;
+  mutable snd_una:      Sequence.t;
+  mutable tx_nxt:       Sequence.t;
+  mutable rx_nxt:       Sequence.t;
   mutable rx_nxt_inseq: Sequence.t;
-  mutable fast_rec_th: Sequence.t;
-  mutable tx_wnd: int32;           (* TX Window size after scaling *)
-  mutable rx_wnd: int32;           (* RX Window size after scaling *)
-  mutable ssthresh: int32;         (* threshold to switch from exponential
-                                      slow start to linear congestion
-                                      avoidance *)
-  mutable cwnd: int32;             (* congestion window *)
-  mutable fast_recovery: bool;     (* flag to mark if this tcp is in
-                                      fast recovery *)
+  mutable fast_rec_th:  Sequence.t;
+  mutable tx_wnd:       int32;      (* TX Window size after scaling *)
+  mutable rx_wnd:       int32;      (* RX Window size after scaling *)
+  mutable ssthresh:     int32;      (* threshold to switch from exponential
+                                       slow start to linear congestion
+                                       avoidance *)
+  mutable cwnd:           int32;    (* congestion window *)
+  mutable fast_recovery:  bool;     (* flag to mark if this tcp is in
+                                       fast recovery *)
 
-  mutable rtt_timer_on: bool;
-  mutable rtt_timer_reset: bool;
-  mutable rtt_timer_seq: Sequence.t;
-  mutable rtt_timer_starttime: float;
-  mutable srtt: float;
-  mutable rttvar: float;
-  mutable rto: float;
-  mutable backoff_count: int;
+  mutable rtt_timer_on:         bool;
+  mutable rtt_timer_reset:      bool;
+  mutable rtt_timer_seq:        Sequence.t;
+  mutable rtt_timer_starttime:  float;
+  mutable srtt:                 float;
+  mutable rttvar:               float;
+  mutable rto:                  float;
+  mutable backoff_count:        int;
 }
 
 let count_ackd_segs = MProf.Counter.make ~name:"tcp-ackd-segs"
 
-let default_mss = 536
-let max_mss = 1460
+(* HERE May need to edit - harder for Linux; need to compare probe MSS to response MSS *)
+let default_mss = 536    (* Want this as default = 0x218 *)
+let max_mss     = 1460
 
 let alpha = 0.125  (* see RFC 2988 *)
-let beta = 0.25    (* see RFC 2988 *)
+let beta  = 0.25   (* see RFC 2988 *)
 
 (* To string for debugging *)
 let pp fmt t =
@@ -71,12 +72,13 @@ let pp fmt t =
     Sequence.pp t.snd_una
 
 (* Initialise the sequence space *)
+(* HERE Where do these values get passed in from? *)
 let t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd ~tx_wnd ~rx_isn ~tx_mss ~tx_isn =
   let tx_nxt = tx_isn in
   let rx_nxt = Sequence.(incr rx_isn) in
   let rx_nxt_inseq = Sequence.(incr rx_isn) in
   (* TODO: improve this sanity check of tx_mss *)
-  let tx_mss = match tx_mss with |None -> default_mss |Some mss -> min mss max_mss in
+  let tx_mss = match tx_mss with | None -> default_mss | Some mss -> min mss max_mss in
   let snd_una = tx_nxt in
   let fast_rec_th = tx_nxt in
   let ack_serviced = true in
@@ -144,6 +146,7 @@ let set_ack_seq_win t s w =
 
 (* TODO: scale the window down so we can advertise it correctly with
    window scaling on the wire *)
+(* HERE Where is sx given from? *)
 let set_rx_wnd t sz =
   t.rx_wnd <- sz
 
