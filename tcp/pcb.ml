@@ -313,21 +313,19 @@ struct
     let { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer } =
       params
     in
-(* HERE Hard-coding tx_mss here to mss_default to see if change observed
-    May wish to do further impl logic here
- *)
-(*
     let tx_mss = List.fold_left (fun a ->
         function Options.MSS m -> Some m | _ -> a
       ) None options
-*)
-    let tx_mss = Some mss_default
+(* HERE Hard-coding tx_mss here to mss_default to see if change observed
+    May wish to do further impl logic here
+ *)
+(*    let tx_mss = Some mss_default     *)
     in
     let (rx_wnd_scale, tx_wnd_scale), opts =
       resolve_wnd_scaling options rx_wnd_scaleoffer
 (* HERE add this next bit in to manually hard-code value of rx_wnd_scale *)
-    in
-    let (rx_wnd_scale, tx_wnd_scale) = (0 , tx_wnd_scale)
+(*    in    *)
+(*    let (rx_wnd_scale, tx_wnd_scale) = (0 , tx_wnd_scale)   *)
 (* end manual hard-coding *)
     in
     (* Set up the windowing variables *)
@@ -335,7 +333,7 @@ struct
     (* Initialise the window handler *)
 (* HERE Could try hard-coding a default value for rx_wnd here - 0x7fe0 = 32_736*)
     let wnd =
-      Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd:32_736 (* rx_wnd_default 0x7fe0 *) ~tx_wnd
+      Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd:rx_wnd_default (* 0x7fe0 *) ~tx_wnd
         ~rx_isn ~tx_mss ~tx_isn
     in
     (* When we transmit an ACK for a received segment, rx_ack is written to *)
