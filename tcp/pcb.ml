@@ -298,12 +298,12 @@ struct
       (Options.Window_size_shift rx_wnd_scaleoffer :: [])
 
   type pcb_params =
-    { tx_wnd: int;
-      sequence: int32;
-      options: Options.t list;
-      tx_isn: Sequence.t;
-      rx_wnd: int;
-      rx_wnd_scaleoffer: int }
+    { tx_wnd:             int;
+      sequence:           int32;
+      options:            Options.t list;
+      tx_isn:             Sequence.t;
+      rx_wnd:             int;
+      rx_wnd_scaleoffer:  int }
 
 (* HERE Would be useful to know where this is called - sets options, etc *)
   let new_pcb t params id =
@@ -319,7 +319,7 @@ struct
         function Options.MSS m -> Some m | _ -> a
       ) None options
 *)
-    let tx_mss = mss_default
+    let tx_mss = Some mss_default
     in
     let (rx_wnd_scale, tx_wnd_scale), opts =
       resolve_wnd_scaling options rx_wnd_scaleoffer
