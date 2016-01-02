@@ -316,7 +316,8 @@ struct
       params
     in
     let tx_mss = List.fold_left (fun a ->
-        function Options.MSS m -> Some m | _ -> a
+      function Options.MSS m -> printf "\nMSS: %d\n" m; Some m
+      | _ -> a
       ) None options
 (* HERE Hard-coding tx_mss here to mss_default to see if change observed
     May wish to do further impl logic here
@@ -423,7 +424,7 @@ struct
 *)
     let wnd = pcb.wnd
     in
-    let mss_val = wnd.tx_mss
+    let mss_val = tx_mss wnd
     in
     let options =
       match mss_val with
