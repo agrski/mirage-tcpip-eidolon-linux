@@ -101,15 +101,16 @@ struct
   let verify_checksum _ _ _ = true
 
 (* HERE change made *)
-  let wscale_default = 0 (* originally, 2 *)
-  let rx_wnd_default = 32_736 (* 0x7fe0 *)
-  let mss_default    = 536 (* 0x218 *)
+  let wscale_default = 0        (* originally, 2 *)
+  let rx_wnd_default = 32_736   (* 0x7fe0 *)
+  let mss_default    = 536      (* 0x218 *)
 
   module Tx = struct
 
 (* HERE May be of use - e.g. setting flags *)
     (* Output a TCP packet, and calculate some settings from a state descriptor *)
     let xmit_pcb ip id ~flags ~wnd ~options ~seq datav =
+      Printf.fprintf stdout "xmit_pcb";
       let window = Int32.to_int (Window.rx_wnd_unscaled wnd) in
       let rx_ack = Some (Window.rx_nxt wnd) in
       let syn = match flags with Segment.Syn -> true | _ -> false in
@@ -123,6 +124,7 @@ struct
     let send_rst { ip; _ } id ~sequence ~ack_number ~syn ~fin =
       let datalen = Int32.add (if syn then 1l else 0l) (if fin then 1l else 0l) in
       let window = 0 in
+(* HERE Unlikely but may need to set options to be non-empty *)
       let options = [] in
       let seq = Sequence.of_int32 ack_number in
       let rx_ack = Some (Sequence.of_int32 (Int32.add sequence datalen)) in
@@ -154,7 +156,6 @@ struct
        also data from the user transmit queue *)
     let thread t pcb ~send_ack ~rx_ack  =
       let { wnd; ack; _ } = pcb in
-
       (* Transmit an empty ack when prompted by the Ack thread *)
       let rec send_empty_ack () =
         Lwt_mvar.take send_ack >>= fun _ ->
@@ -306,22 +307,33 @@ struct
 
 (* HERE Would be useful to know where this is called - sets options, etc *)
   let new_pcb t params id =
+    Printf.printf "new_pcb";
     let { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer } =
       params
     in
+(* HERE Hard-coding tx_mss here to mss_default to see if change observed
+    May wish to do further impl logic here
+ *)
+(*
     let tx_mss = List.fold_left (fun a ->
         function Options.MSS m -> Some m | _ -> a
       ) None options
+*)
+    let tx_mss = mss_default
     in
     let (rx_wnd_scale, tx_wnd_scale), opts =
       resolve_wnd_scaling options rx_wnd_scaleoffer
+(* HERE add this next bit in to manually hard-code value of rx_wnd_scale *)
+    in
+    let (rx_wnd_scale, tx_wnd_scale) = (0 , tx_wnd_scale)
+(* end manual hard-coding *)
     in
     (* Set up the windowing variables *)
     let rx_isn = Sequence.of_int32 sequence in
     (* Initialise the window handler *)
 (* HERE Could try hard-coding a default value for rx_wnd here - 0x7fe0 = 32_736*)
     let wnd =
-      Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd:rx_wnd_default (* 0x7fe0 *) ~tx_wnd
+      Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd:32_736 (* rx_wnd_default 0x7fe0 *) ~tx_wnd
         ~rx_isn ~tx_mss ~tx_isn
     in
     (* When we transmit an ACK for a received segment, rx_ack is written to *)
