@@ -424,7 +424,7 @@ struct
 *)
     let wnd = pcb.wnd
     in
-    let mss_val = tx_mss wnd
+    let mss_val = Window.tx_mss wnd
     in
     let options =
       match mss_val with
