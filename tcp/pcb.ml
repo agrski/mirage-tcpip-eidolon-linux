@@ -111,7 +111,7 @@ struct
 (* HERE May be of use - e.g. setting flags *)
     (* Output a TCP packet, and calculate some settings from a state descriptor *)
     let xmit_pcb ip id ~flags ~wnd ~options ~seq datav =
-      printf "xmit_pcb";
+(*      printf "xmit_pcb";    *)
       let window = Int32.to_int (Window.rx_wnd_unscaled wnd) in
       let rx_ack = Some (Window.rx_nxt wnd) in
       let syn = match flags with Segment.Syn -> true | _ -> false in
@@ -182,7 +182,7 @@ struct
 
     (* Process an incoming TCP packet that has an active PCB *)
     let input _t pkt (pcb,_) =
-      printf "Rx.input: receiving packet with existing pcb";
+(*      printf "Rx.input: receiving packet with existing pcb";    *)
       let sequence = Sequence.of_int32 (Tcp_wire.get_tcp_sequence pkt) in
       let ack_number =
         Sequence.of_int32 (Tcp_wire.get_tcp_ack_number pkt)
@@ -307,9 +307,11 @@ struct
       rx_wnd:             int;
       rx_wnd_scaleoffer:  int }
 
-(* HERE Would be useful to know where this is called - sets options, etc *)
+(* HERE Would be useful to know where this is called - sets options, etc        *)
+(* Called from e.g. new_server_connection, new_client_connection                *)
+(* Params = { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }    *)
   let new_pcb t params id =
-    printf "new_pcb";
+(*    printf "new_pcb";   *)
     let { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer } =
       params
     in
@@ -390,7 +392,8 @@ struct
     Gc.finalise fnth th;
     Lwt.return (pcb, th, opts)
 
-(* HERE Setting up a server - where do params come from? *)
+(* HERE Setting up a server - where do params come from? E.g. from process_syn  *)
+(* Params = { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }    *)
   let new_server_connection t params id pushf =
     Log.f debug (with_stats "new-server-connection" t);
 (* HERE Use of new_pcb should be fine if correct params set in there *)
@@ -407,19 +410,20 @@ struct
     Stats.incr_listen ();
     (* Queue a SYN ACK for transmission *)
 (* HERE Sets a value for MSS - may need to modify from  1460 *)
-(* MSS value may have been set in opts already - need to check:
+(* MSS value may have been set in pcb.window already - need to check:
     If set, leave it alone (otherwise overwrites to always use mss_default
     If not, set to mss_default
  *)
 (*
-    let options = if List.mem (Options.MSS _) opts
-                  then opts
-                  else Options.MSS mss_default :: opts in
-*)
     let mss_val = List.fold_left (fun a -> function
       | Options.MSS m -> Some m
       | _ -> a)
-      None opts
+      None wnd
+    in
+*)
+    let wnd = pcb.wnd
+    in
+    let mss_val = wnd.tx_mss
     in
     let options =
       match mss_val with
@@ -577,7 +581,7 @@ struct
  * So, may need to find where this is called to find control logic for params
  *)
   let input_no_pcb t listeners pkt id =
-    printf "input_no_pcb: packet without handler";
+(*    printf "input_no_pcb: packet without handler";    *)
     match Tcp_wire.get_rst pkt with
     | true -> process_reset t id
     | false ->
