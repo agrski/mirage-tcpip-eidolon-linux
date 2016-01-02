@@ -309,7 +309,6 @@ struct
 
 (* HERE Would be useful to know where this is called - sets options, etc        *)
 (* Called from e.g. new_server_connection, new_client_connection                *)
-(* Params = { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }    *)
   let new_pcb t params id =
 (*    printf "new_pcb";   *)
     let { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer } =
@@ -319,10 +318,6 @@ struct
       function Options.MSS m -> printf "\nMSS: %d\n" m; Some m
       | _ -> a
       ) None options
-(* HERE Hard-coding tx_mss here to mss_default to see if change observed
-    May wish to do further impl logic here
- *)
-(*    let tx_mss = Some mss_default     *)
     in
     let (rx_wnd_scale, tx_wnd_scale), opts =
       resolve_wnd_scaling options rx_wnd_scaleoffer
@@ -334,7 +329,6 @@ struct
     (* Set up the windowing variables *)
     let rx_isn = Sequence.of_int32 sequence in
     (* Initialise the window handler *)
-(* HERE Could try hard-coding a default value for rx_wnd here - 0x7fe0 = 32_736*)
     let wnd =
       Window.t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd:rx_wnd_default (* 0x7fe0 *) ~tx_wnd
         ~rx_isn ~tx_mss ~tx_isn
@@ -487,8 +481,7 @@ struct
         Hashtbl.remove t.connects id;
         Stats.decr_connect ();
         let tx_wnd = Tcp_wire.get_tcp_window pkt in
-(* HERE Maybe need to change this window value *)
-(* Was rx_wnd = 65535 = 0xFFFF *)
+(* HERE Maybe need to change this window value rx_wnd = 65535 = 0xFFFF *)
         let rx_wnd = rx_wnd_default (* = 0x7fe0 *) in
         (* TODO: fix hardcoded value - it assumes that this value was
            sent in the SYN *)
@@ -529,8 +522,8 @@ struct
       let rx_wnd = rx_wnd_default in
 (* HERE scaleoffer should already be set to right value *)
       let rx_wnd_scaleoffer = wscale_default in
-(* HERE Do we really want to use options, etc passed in?
- * Where are they set?
+(* HERE Do we really want to use options, etc passed in? Yes
+ * Where are they set? In input_no_pcb, from incoming packet generally
  * In incoming syn packet? From other control logic?
  *)
       new_server_connection t
