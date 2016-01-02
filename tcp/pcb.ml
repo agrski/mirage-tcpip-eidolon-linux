@@ -421,15 +421,14 @@ struct
       | _ -> a)
       None wnd
     in
-*)
-    let wnd = pcb.wnd
-    in
-    let mss_val = Window.tx_mss wnd
-    in
     let options =
       match mss_val with
-        | Some m  -> printf "\nMSS:%d\n" m; opts                               (* MSS already set *)
+        | Some m  -> printf "\nMSS:%d\n" m; opts        (* MSS already set *)
         | None    -> Options.MSS mss_default :: opts    (* MSS not yet set *)
+*)
+    let mss_val = Window.tx_mss pcb.wnd     (* Not an int option, just an int *)
+    in
+    let options = Options.MSS mss_val :: opts
     in
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
