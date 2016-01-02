@@ -100,7 +100,7 @@ module Make (Ethif : V1_LWT.ETHIF) (Clock : V1.CLOCK) (Time : V1_LWT.TIME) = str
       (* Received ARP request, check if we can satisfy it from
          our own IPv4 list *)
       let req_ipv4 = Ipaddr.V4.of_int32 (get_arp_tpa frame) in
-      (* printf "ARP: who-has %s?\n%!" (Ipaddr.V4.to_string req_ipv4); *)
+      printf "ARP: who-has %s?\n%!" (Ipaddr.V4.to_string req_ipv4);
       if List.mem req_ipv4 t.bound_ips then begin
         printf "ARP responding to: who-has %s?\n%!" (Ipaddr.V4.to_string req_ipv4);
         (* We own this IP, so reply with our MAC *)

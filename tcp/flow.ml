@@ -53,7 +53,7 @@ module Make(IP:V1_LWT.IP)(TM:V1_LWT.TIME)(C:V1.CLOCK)(R:V1.RANDOM) = struct
           Ipaddr.pp_hum (IP.to_uipaddr daddr) dport);
     Lwt.return (`Error `Refused)
 
-  let ok x = Printf.printf "Returning okay\n"; Lwt.return (`Ok x)
+  let ok x = Printf.printf "Flow: returning okay\n"; Lwt.return (`Ok x)
 
   let error_message = function
     | `Unknown msg -> msg
