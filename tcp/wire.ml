@@ -56,6 +56,8 @@ module Make (Ip:V1_LWT.IP) = struct
 (* HERE
     If window shift/scale = 0 then remove it
     Ensuring EOL not written may need code in options.ml
+    Appears as if setting only 1 option ensures no EOL used in output
+      (as no options list, just a single option)
  *)
     let options = List.fold_left
       (fun a ->
