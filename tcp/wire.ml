@@ -41,7 +41,7 @@ module Make (Ip:V1_LWT.IP) = struct
     local_ip:   Ip.ipaddr;        (* Local IP address *)
   }
 
-(* HERE What calls this - where do params get passed in? *)
+(* HERE What calls this - where do params get passed in? pcb.ml does I think *)
 (* Also, may have to modify size of some of the things here - e.g. to account
     for unusual options specifications which leave space
  *)
@@ -53,6 +53,18 @@ module Make (Ip:V1_LWT.IP) = struct
     let tcp_frame = Cstruct.shift frame header_len in
     (* Append the TCP options to the header *)
     let options_frame = Cstruct.shift tcp_frame Tcp_wire.sizeof_tcp in
+(* HERE
+    If window shift/scale = 0 then remove it
+    Ensuring EOL not written may need code in options.ml
+ *)
+    let options = List.fold_left
+      (fun a ->
+        function Options.Window_shift_size 0 -> a
+        | opt -> opt :: a )
+      []
+      options
+    in
+(* End of my code *)
     let options_len =
       match options with
       |[] -> 0
