@@ -59,7 +59,7 @@ module Make (Ip:V1_LWT.IP) = struct
  *)
     let options = List.fold_left
       (fun a ->
-        function Options.Window_shift_size 0 -> a
+        function Options.Window__size_shift 0 -> a
         | opt -> opt :: a )
       []
       options
