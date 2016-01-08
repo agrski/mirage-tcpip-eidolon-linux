@@ -436,7 +436,7 @@ struct
 (* My code *)
     let flags = match fin with
       | false -> Segment.Syn
-      | true  -> Segment.SynFin
+      | true  -> printf "new_server_conection: SynFin\n"; Segment.SynFin
     in
 (* End my code *)
     TXS.output ~flags:flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
