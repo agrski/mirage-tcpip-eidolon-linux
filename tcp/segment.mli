@@ -59,7 +59,7 @@ module Rx (T:V1_LWT.TIME) : sig
 
 end
 
-type tx_flags = No_flags | Syn | Fin | Rst | Psh
+type tx_flags = No_flags | Syn | Fin | Rst | Psh | SynFin
 (** Either Syn/Fin/Rst allowed, but not combinations *)
 
 (** Pre-transmission queue *)
