@@ -143,6 +143,7 @@ let write_iter buf =
     Cstruct.blit_from_string contents 0 buf 2 content_len;
     tlen
 
+(* HERE Can't find where it appends EOL if len(ts) > 1 *)
 let marshal buf ts =
   (* Apply the write iterator on each stamp *)
   let rec write fn off buf =
