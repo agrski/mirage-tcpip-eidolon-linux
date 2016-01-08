@@ -546,7 +546,7 @@ struct
  *)
       new_server_connection t
         { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
-        id pushf
+        id pushf ~fin
       >>= fun _ ->
       Lwt.return_unit
 (* HERE RST values may need to be modified, if can't modify in whatever control logic
