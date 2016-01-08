@@ -588,8 +588,13 @@ struct
       match syn, ack with
       | true , true  -> process_synack t id ~pkt ~ack_number ~sequence
                           ~options ~syn ~fin
+(* HERE synfin - T3 - should be handled here *)
+(* ORIGINAL
       | true , false -> process_syn t id ~listeners ~pkt ~ack_number ~sequence
-                          ~options ~syn ~fin
+          ~options ~syn ~fin
+*)
+      | true, false  -> if (~fin) then printf "Received Syn, Fin\n";
+        process_syn t id ~listeners ~pkt ~ack_number ~sequence ~options ~syn ~fin
       | false, true  -> process_ack t id ~pkt ~ack_number ~sequence ~syn ~fin
       | false, false ->
         (* What the hell is this packet? No SYN,ACK,RST *)
