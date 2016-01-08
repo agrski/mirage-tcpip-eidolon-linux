@@ -114,8 +114,17 @@ struct
 (*      printf "xmit_pcb";    *)
       let window = Int32.to_int (Window.rx_wnd_unscaled wnd) in
       let rx_ack = Some (Window.rx_nxt wnd) in
-      let syn = match flags with Segment.Syn -> true | _ -> false in
-      let fin = match flags with Segment.Fin -> true | _ -> false in
+(*      let syn, fin = match flags with Segment.SynFin -> true, true | _ -> false, false in *)
+      let syn = match flags with
+        | Segment.Syn     -> true
+        | Segment.SynFin  -> true
+        | _               -> false
+      in
+      let fin = match flags with
+        | Segment.Fin     -> true
+        | Segment.SynFin  -> true
+        | _               -> false
+      in
       let rst = match flags with Segment.Rst -> true | _ -> false in
       let psh = match flags with Segment.Psh -> true | _ -> false in
       WIRE.xmit ~ip ~id ~syn ~fin ~rst ~psh ~rx_ack ~seq ~window ~options datav
@@ -389,7 +398,7 @@ struct
 
 (* HERE Setting up a server - where do params come from? E.g. from process_syn  *)
 (* Params = { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }    *)
-  let new_server_connection t params id pushf =
+  let new_server_connection t params id pushf ~fin =
     Log.f debug (with_stats "new-server-connection" t);
 (* HERE Use of new_pcb should be fine if correct params set in there *)
     new_pcb t params id >>= fun (pcb, th, opts) ->
@@ -424,8 +433,17 @@ struct
     in
     let options = Options.MSS mss_val :: opts
     in
+(* My code *)
+    let flags = match fin with
+      | false -> Segment.Syn
+      | true  -> Segment.SynFin
+    in
+(* End my code *)
+    TXS.output ~flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
+(* ORIGINAL
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
+ *)
 
 (* Looks like it sets up a connection as a client - active-open end *)
 (* Apparently SYN has already been sent, so this func only sends ACK *)

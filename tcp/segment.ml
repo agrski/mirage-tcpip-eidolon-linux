@@ -212,12 +212,13 @@ end
    with control flags (such as urgent, or fin to mark the end).
 *)
 
-type tx_flags = (* Either Syn/Fin/Rst allowed, but not combinations *)
+type tx_flags = (* Either Syn/Fin/Rst allowed, or Syn+Fin for nmap T3 packet *)
   | No_flags
   | Syn
   | Fin
   | Rst
   | Psh
+  | SynFin
 
 module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
 
