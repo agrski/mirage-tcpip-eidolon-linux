@@ -238,8 +238,9 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
   (* Sequence length of the segment *)
   let len seg =
     (match seg.flags with
-     | No_flags | Psh | Rst -> 0
-     | Syn | Fin -> 1) +
+      | No_flags | Psh | Rst  -> 0
+      | Syn | Fin             -> 1
+      | SynFin                -> 2) +
     (Cstruct.lenv seg.data)
 
   (* Queue of pre-transmission segments *)
@@ -257,11 +258,12 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
   let pp_seg fmt seg =
     Log.pf fmt "[%s%d]"
       (match seg.flags with
-       | No_flags ->""
-       | Syn ->"SYN "
-       | Fin ->"FIN "
-       | Rst -> "RST "
-       | Psh -> "PSH ")
+       | No_flags -> ""
+       | Syn      -> "SYN "
+       | Fin      -> "FIN "
+       | SynFin   -> "SYN-FIN "
+       | Rst      -> "RST "
+       | Psh      -> "PSH ")
       (len seg)
 
   let ack_segment _ _ = ()

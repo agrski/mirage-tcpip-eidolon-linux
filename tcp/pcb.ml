@@ -439,7 +439,7 @@ struct
       | true  -> Segment.SynFin
     in
 (* End my code *)
-    TXS.output ~flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
+    TXS.output ~flags:flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
 (* ORIGINAL
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
@@ -611,7 +611,7 @@ struct
       | true , false -> process_syn t id ~listeners ~pkt ~ack_number ~sequence
           ~options ~syn ~fin
 *)
-      | true, false  -> if (fin) then printf "Received Syn, Fin\n" else printf "Received Syn, no Fin\n";
+      | true, false  -> if (fin) then printf "Received Syn, Fin\n";
         process_syn t id ~listeners ~pkt ~ack_number ~sequence ~options ~syn ~fin
       | false, true  -> process_ack t id ~pkt ~ack_number ~sequence ~syn ~fin
       | false, false ->
