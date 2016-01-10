@@ -137,7 +137,7 @@ struct
 (* HERE Unlikely but may need to set options to be non-empty *)
       let options = [] in
 (*      let seq = Sequence.of_int32 ack_number in *) (* Original *)
-      let seq = Sequence.of_int32 0 in
+      let seq = Sequence.of_int 0 in
       let rx_ack = Some (Sequence.of_int32 (Int32.add sequence datalen)) in
       WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options []
 
