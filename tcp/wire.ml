@@ -90,8 +90,10 @@ module Make (Ip:V1_LWT.IP) = struct
 (* HERE May need to set tcp_flags to something else *)
 (* HERE - ECN - May need to set ECE/CWR bits here   *)
     Tcp_wire.set_tcp_flags tcp_frame 0;
-    Tcp_wire.set_ece tcp_frame;
-    Tcp_wire.set_cwr tcp_frame;
+    if ecn then begin
+      Tcp_wire.set_ece tcp_frame;
+      Tcp_wire.set_cwr tcp_frame
+    end;
 (* HERE Sets ACK *)
     if rx_ack <> None then Tcp_wire.set_ack tcp_frame;
     if rst then Tcp_wire.set_rst tcp_frame;

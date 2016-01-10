@@ -30,6 +30,6 @@ module Make(Ip:V1_LWT.IP) : sig
   val xmit : ip:Ip.t -> id:id ->
     ?rst:bool -> ?syn:bool -> ?fin:bool -> ?psh:bool ->
     rx_ack:Sequence.t option -> seq:Sequence.t -> window:int ->
-    options:Options.t list ->
+    options:Options.t list -> ecn:bool ->
     Cstruct.t list -> unit Lwt.t
 end
