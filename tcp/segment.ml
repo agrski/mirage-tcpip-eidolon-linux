@@ -227,7 +227,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
   module TX = Window.Make(Clock)
 
   type xmit = flags:tx_flags -> wnd:Window.t -> options:Options.t list ->
-    seq:Sequence.t -> Cstruct.t list -> unit Lwt.t
+    seq:Sequence.t -> ecn:bool -> Cstruct.t list -> unit Lwt.t
 
   type seg = {
     data:   Cstruct.t list;
@@ -418,7 +418,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
    *)
 (* HERE Where do options get passed in? *)
 (* Options passed in from at least /tcp/pcb.ml *)
-  let output ?(flags=No_flags) ?(options=[]) q data =
+  let output ?(flags=No_flags) ?(options=[]) ?(ecn=false)  q data =
     (* Transmit the packet to the wire
          TODO: deal with transmission soft/hard errors here RFC5461 *)
     let { wnd; _ } = q in
@@ -437,7 +437,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
         TT.start q.rexmit_timer ~p seg.seq
     in
     q_rexmit () >>= fun () ->
-    q.xmit ~flags ~wnd ~options ~seq data >>= fun _ ->
+    q.xmit ~flags ~wnd ~options ~seq ~ecn data >>= fun _ ->
     (* Inform the RX ack thread that we've just sent one *)
     Lwt_mvar.put q.rx_ack ack
 end

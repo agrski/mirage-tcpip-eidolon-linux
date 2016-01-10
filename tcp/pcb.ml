@@ -110,7 +110,7 @@ struct
 
 (* HERE May be of use - e.g. setting flags *)
     (* Output a TCP packet, and calculate some settings from a state descriptor *)
-    let xmit_pcb ip id ~flags ~wnd ~options ~seq datav =
+    let xmit_pcb ip id ~flags ~wnd ~options ~seq ~ecn datav =
 (*      printf "xmit_pcb";    *)
       let window = Int32.to_int (Window.rx_wnd_unscaled wnd) in
       let rx_ack = Some (Window.rx_nxt wnd) in
@@ -127,7 +127,7 @@ struct
       in
       let rst = match flags with Segment.Rst -> true | _ -> false in
       let psh = match flags with Segment.Psh -> true | _ -> false in
-      WIRE.xmit ~ip ~id ~syn ~fin ~rst ~psh ~rx_ack ~seq ~window ~options datav
+      WIRE.xmit ~ip ~id ~syn ~fin ~rst ~psh ~rx_ack ~seq ~window ~options ~ecn datav
 
 (* HERE May be of use in handling RSTs specially *)
     (* Output an RST response when we dont have a PCB *)
@@ -405,7 +405,7 @@ struct
 
 (* HERE Setting up a server - where do params come from? E.g. from process_syn  *)
 (* Params = { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }    *)
-  let new_server_connection t params id pushf ~fin =
+  let new_server_connection t params id pushf ~fin ~ecn =
     Log.f debug (with_stats "new-server-connection" t);
 (* HERE Use of new_pcb should be fine if correct params set in there *)
     new_pcb t params id >>= fun (pcb, th, opts) ->
@@ -446,7 +446,7 @@ struct
       | true  -> printf "new_server_conection: SynFin\n"; Segment.SynFin
     in
 (* End my code *)
-    TXS.output ~flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
+    TXS.output ~flags ~options ~ecn txq [] >>= fun () -> Lwt.return (pcb, th)
 (* ORIGINAL
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
@@ -551,6 +551,8 @@ struct
  * Where are they set? In input_no_pcb, from incoming packet generally
  * In incoming syn packet? From other control logic?
  *)
+(* HERE Check for ECN - CWR, ECE - bits *)
+      let is_ecn = Tcp_wire.get_ece pkt && Tcp_wire.get_cwr pkt in
       new_server_connection t
         { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
         id pushf ~fin

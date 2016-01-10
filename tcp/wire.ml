@@ -46,7 +46,7 @@ module Make (Ip:V1_LWT.IP) = struct
     for unusual options specifications which leave space
  *)
   let xmit ~ip ~id ?(rst=false) ?(syn=false) ?(fin=false) ?(psh=false)
-      ~rx_ack ~seq ~window ~options datav =
+      ~rx_ack ~seq ~window ~options ~ecn datav =
     (* Make a TCP/IP header frame *)
     let frame, header_len = Ip.allocate_frame ip ~dst:id.dest_ip ~proto:`TCP in
     (* Shift this out by the combined ethernet + IP header sizes *)
@@ -69,8 +69,8 @@ module Make (Ip:V1_LWT.IP) = struct
 (* End of my code *)
     let options_len =
       match options with
-      |[] -> 0
-      |options -> Options.marshal options_frame options
+      | [] -> 0
+      | options -> Options.marshal options_frame options
     in
     let tcp_frame = Cstruct.set_len tcp_frame (Tcp_wire.sizeof_tcp + options_len) in
     (* At this point, extend the IPv4 view by the TCP+options size *)
@@ -88,7 +88,10 @@ module Make (Ip:V1_LWT.IP) = struct
     Tcp_wire.set_tcp_ack_number tcp_frame ack_number;
     Tcp_wire.set_data_offset tcp_frame data_off;
 (* HERE May need to set tcp_flags to something else *)
+(* HERE - ECN - May need to set ECE/CWR bits here   *)
     Tcp_wire.set_tcp_flags tcp_frame 0;
+    Tcp_wire.set_ece tcp_frame;
+    Tcp_wire.set_cwr tcp_frame;
 (* HERE Sets ACK *)
     if rx_ack <> None then Tcp_wire.set_ack tcp_frame;
     if rst then Tcp_wire.set_rst tcp_frame;
