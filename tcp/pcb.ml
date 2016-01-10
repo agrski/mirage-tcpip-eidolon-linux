@@ -139,7 +139,10 @@ struct
 (* Sets seq # = ack number from probe; in nmap, this is S=A *)
       let seq = Sequence.of_int32 ack_number in
 (*      let rx_ack = Some (Sequence.of_int32 (Int32.add sequence datalen)) in  *)
-      let rx_ack = Some (Sequence.of_int 0) in
+      let rx_ack = match syn with
+        | true  -> Some (Sequence.of_int32 (Int32.add sequence datalen))
+        | false -> Some (Sequence.of_int 0)
+      in
       WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options []
 
 (* HERE May need to modify SYN packets *)
