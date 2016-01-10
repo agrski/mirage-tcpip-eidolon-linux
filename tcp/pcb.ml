@@ -137,10 +137,13 @@ struct
 (* HERE Unlikely but may need to set options to be non-empty *)
       let options = [] in
 (* Sets seq # = ack number from probe; in nmap, this is S=A *)
-      let seq = Sequence.of_int32 ack_number in
-(*      let rx_ack = Some (Sequence.of_int32 (Int32.add sequence datalen)) in  *)
+      let seq = match syn with
+        | true  -> Sequence.of_int 0
+        | false -> Sequence.of_int32 ack_number
+      in
+(*      let seq = Sequence.of_int32 ack_number in *)
       let rx_ack = match syn with
-        | true  -> Some (Sequence.of_int32 (Int32.add sequence datalen))
+        | true  -> Some (Sequence.of_int32 (Int32.add sequence datalen)) (* This orig *)
         | false -> Some (Sequence.of_int 0)
       in
       WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options []
@@ -558,6 +561,7 @@ struct
  * calls this function
  *)
     | None ->
+(* HERE - T5 - Should be a syn on a closed port - as not listening *)
       Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
 
 (* HERE *)
