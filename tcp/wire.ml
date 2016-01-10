@@ -89,6 +89,7 @@ module Make (Ip:V1_LWT.IP) = struct
     Tcp_wire.set_data_offset tcp_frame data_off;
 (* HERE May need to set tcp_flags to something else *)
     Tcp_wire.set_tcp_flags tcp_frame 0;
+(* HERE Sets ACK *)
     if rx_ack <> None then Tcp_wire.set_ack tcp_frame;
     if rst then Tcp_wire.set_rst tcp_frame;
     if syn then Tcp_wire.set_syn tcp_frame;
