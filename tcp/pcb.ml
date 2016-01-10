@@ -136,7 +136,8 @@ struct
       let window = 0 in
 (* HERE Unlikely but may need to set options to be non-empty *)
       let options = [] in
-      let seq = Sequence.of_int32 ack_number in
+(*      let seq = Sequence.of_int32 ack_number in *) (* Original *)
+      let seq = Sequence.of_int32 0 in
       let rx_ack = Some (Sequence.of_int32 (Int32.add sequence datalen)) in
       WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options []
 
@@ -439,7 +440,7 @@ struct
       | true  -> printf "new_server_conection: SynFin\n"; Segment.SynFin
     in
 (* End my code *)
-    TXS.output ~flags:flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
+    TXS.output ~flags ~options pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
 (* ORIGINAL
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
@@ -560,6 +561,7 @@ struct
  * then active channel handles it OR
  * connects sets up active connection, then active channel handles it
  *)
+(* HERE - T4 - T6 - probe packets handled here *)
   let process_ack t id ~pkt ~ack_number ~sequence ~syn ~fin =
     Log.f debug (with_stats "process-ack" t);
     match hashtbl_find t.listens id with
@@ -606,16 +608,13 @@ struct
       match syn, ack with
       | true , true  -> process_synack t id ~pkt ~ack_number ~sequence
                           ~options ~syn ~fin
-(* HERE synfin - T3 - should be handled here *)
-(* ORIGINAL
-      | true , false -> process_syn t id ~listeners ~pkt ~ack_number ~sequence
-          ~options ~syn ~fin
-*)
+(* HERE synfin - T3 - handled here *)
       | true, false  -> if (fin) then printf "PCB: Received Syn, Fin\n";
         process_syn t id ~listeners ~pkt ~ack_number ~sequence ~options ~syn ~fin
       | false, true  -> process_ack t id ~pkt ~ack_number ~sequence ~syn ~fin
       | false, false ->
         (* What the hell is this packet? No SYN,ACK,RST *)
+(* HERE - T7 - to be handled here (has no syn, ack, does have Fin, Psh, Urg *)
         Log.s debug "input-no-pcb: unknown packet";
         Lwt.return_unit
 
