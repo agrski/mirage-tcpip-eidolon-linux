@@ -145,7 +145,7 @@ struct
         | true  -> Some (Sequence.of_int32 (Int32.add sequence datalen)) (* This orig *)
         | false -> None (* In wire.ml, if rx_ack = None, sets to 0l and doesn't set ACK *)
       in
-      WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options []
+      WIRE.xmit ~ip ~id ~rst:true ~rx_ack ~seq ~window ~options ~ecn:false []
 
 (* HERE May need to modify SYN packets *)
     (* Output a SYN packet *)
