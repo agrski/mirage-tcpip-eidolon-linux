@@ -32,7 +32,7 @@ module Tx(Time:V1_LWT.TIME)(Clock:V1.CLOCK) : sig
 
   module TXS : sig
     type t = Segment.Tx(Time)(Clock).t
-    val output : ?flags:Segment.tx_flags -> ?options:Options.t list -> t ->
+    val output : ?flags:Segment.tx_flags -> ?options:Options.t list -> ?ecn:bool-> t ->
       Cstruct.t list -> unit Lwt.t
   end
 
