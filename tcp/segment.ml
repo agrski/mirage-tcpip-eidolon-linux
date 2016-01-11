@@ -399,7 +399,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
     in
     tx_ack_t ()
 
-  let create ~xmit ~wnd ~state ~rx_ack ~tx_ack ~tx_wnd_update =
+  let create ~xmit:xmit ~wnd ~state ~rx_ack ~tx_ack ~tx_wnd_update =
     let segs = Lwt_sequence.create () in
     let dup_acks = 0 in
     let expire = ontimer xmit state segs wnd in
