@@ -182,7 +182,7 @@ struct
         let options = [] in
         let seq = Window.tx_nxt wnd in
         ACK.transmit ack ack_number >>= fun () ->
-        xmit_pcb t.ip pcb.id ~flags ~wnd ~options ~seq [] >>= fun () ->
+        xmit_pcb t.ip pcb.id ~flags ~wnd ~options ~seq [] ~ecn:false >>= fun () ->
         send_empty_ack () in
       (* When something transmits an ACK, tell the delayed ACK thread *)
       let rec notify () =
