@@ -363,9 +363,8 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
             let flags=rexmit_seg.flags in
 (* HERE Once again, no options at all - hopefully don't need to touch *)
             let options=[] in   (* TODO: put the right options    *)
-            let ecn = false in  (* TODO: HERE: Set to right value *)
             Lwt.async
-              (fun () -> q.xmit ~flags ~wnd ~options ~seq ~ecn rexmit_seg.data);
+              (fun () -> q.xmit ~flags ~wnd ~options ~seq rexmit_seg.data);
             Lwt.return_unit
           end else
             Lwt.return_unit
@@ -399,7 +398,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
     in
     tx_ack_t ()
 
-  let create ~xmit:xmit ~wnd ~state ~rx_ack ~tx_ack ~tx_wnd_update =
+  let create ~xmit ~wnd ~state ~rx_ack ~tx_ack ~tx_wnd_update =
     let segs = Lwt_sequence.create () in
     let dup_acks = 0 in
     let expire = ontimer xmit state segs wnd in
@@ -419,7 +418,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
    *)
 (* HERE Where do options get passed in? *)
 (* Options passed in from at least /tcp/pcb.ml *)
-  let output ?(flags=No_flags) ?(options=[]) ?(ecn=false)  q data =
+  let output ?(flags=No_flags) ?(options=[]) ?(ecn=false) q data =
     (* Transmit the packet to the wire
          TODO: deal with transmission soft/hard errors here RFC5461 *)
     let { wnd; _ } = q in
