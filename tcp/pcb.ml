@@ -110,7 +110,7 @@ struct
 
 (* HERE May be of use - e.g. setting flags *)
     (* Output a TCP packet, and calculate some settings from a state descriptor *)
-    let xmit_pcb ip id ~flags ~wnd ~options ~seq ~ecn datav =
+    let xmit_pcb ip id ~flags ~wnd ~options ~seq ?(ecn=false) datav =
 (*      printf "xmit_pcb";    *)
       let window = Int32.to_int (Window.rx_wnd_unscaled wnd) in
       let rx_ack = Some (Window.rx_nxt wnd) in
