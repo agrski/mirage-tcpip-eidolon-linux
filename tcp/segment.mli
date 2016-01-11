@@ -78,7 +78,7 @@ module Tx (Time:V1_LWT.TIME)(Clock:V1.CLOCK) : sig
     tx_wnd_update:int Lwt_mvar.t -> t * unit Lwt.t
 
   val output:
-    ?flags:tx_flags -> ?options:Options.t list -> t -> Cstruct.t list ->
+    ?flags:tx_flags -> ?options:Options.t list -> ?ecn:bool -> t -> Cstruct.t list ->
     unit Lwt.t
   (** Queue a segment for transmission. May block if:
 
