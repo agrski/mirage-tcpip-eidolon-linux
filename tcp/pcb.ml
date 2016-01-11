@@ -150,7 +150,8 @@ struct
 (* HERE May need to modify SYN packets *)
     (* Output a SYN packet *)
     let send_syn { ip; _ } id ~tx_isn ~options ~window =
-      WIRE.xmit ~ip ~id ~syn:true ~rx_ack:None ~seq:tx_isn ~window ~options []
+      WIRE.xmit ~ip ~id ~syn:true ~rx_ack:None ~seq:tx_isn ~window ~options
+        ~ecn:false []
 
     (* Queue up an immediate close segment *)
     let close pcb =
