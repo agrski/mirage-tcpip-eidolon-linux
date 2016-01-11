@@ -446,7 +446,7 @@ struct
       | true  -> printf "new_server_conection: SynFin\n"; Segment.SynFin
     in
 (* End my code *)
-    TXS.output ~flags ~options ~ecn txq [] >>= fun () -> Lwt.return (pcb, th)
+    TXS.output ~flags ~options ~ecn pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
 (* ORIGINAL
     TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
     Lwt.return (pcb, th)
