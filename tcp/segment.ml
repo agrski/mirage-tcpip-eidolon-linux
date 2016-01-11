@@ -227,7 +227,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
   module TX = Window.Make(Clock)
 
   type xmit = flags:tx_flags -> wnd:Window.t -> options:Options.t list ->
-    seq:Sequence.t -> ?(ecn:bool) -> Cstruct.t list -> unit Lwt.t
+    seq:Sequence.t -> ?ecn:bool -> Cstruct.t list -> unit Lwt.t
 
   type seg = {
     data:   Cstruct.t list;
