@@ -108,6 +108,8 @@ module Make (Ip:V1_LWT.IP) = struct
       Tcp_wire.set_urg_ptr_nz tcp_frame
     else
       Tcp_wire.set_tcp_urg_ptr tcp_frame 0;
+    if ecn then
+      Tcp_wire.set_rsvd_nz tcp_frame;
     let checksum = Ip.checksum frame (tcp_frame :: datav) in
     Tcp_wire.set_tcp_checksum tcp_frame checksum;
     (* PERF: uncommenting the next expression results in ~10% perf degradation
