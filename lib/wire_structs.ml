@@ -127,7 +127,7 @@ module Tcp_wire = struct
 
 (* HERE My addition *)
   let set_urg_ptr_nz buf =
-    Cstruct.BE.set_uint16 bug 18 ((Cstruct.BE.get_uint16 buf 18) lor (1 lsl 0))
+    Cstruct.BE.set_uint16 buf 18 ((Cstruct.BE.get_uint16 buf 18) lor (1 lsl 0))
 
 (* End my additions *)
 end
