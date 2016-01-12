@@ -105,7 +105,7 @@ module Make (Ip:V1_LWT.IP) = struct
     Tcp_wire.set_tcp_checksum tcp_frame 0;
 (* HERE URG pointer may need to be set *)
     if ecn then
-      Tcp_wire.set_tcp_urg_ptr tcp_frame 1
+      Tcp_wire.set_urg_ptr_nz tcp_frame
     else
       Tcp_wire.set_tcp_urg_ptr tcp_frame 0;
     let checksum = Ip.checksum frame (tcp_frame :: datav) in
