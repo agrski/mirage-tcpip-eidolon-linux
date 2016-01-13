@@ -603,7 +603,7 @@ struct
 (* Think need to find a way to make F=AR rather than F=R (suspect F=R will happen) *)
 (* In xmit_pcb, sets rx_ack so should have F=AR actually *)
   let process_t7 t id ~pkt ~ack_number ~sequence =
-    Log.f debug (with stats "process-t7-probe" t);
+    Log.f debug (with_stats "process-t7-probe" t);
     match listeners id.WIRE.local_port with
     | Some pushf ->  (* Open, listening port *)
       let tx_isn = Sequence.of_int 0 in
