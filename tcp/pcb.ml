@@ -649,7 +649,7 @@ struct
         (* What the hell is this packet? No SYN,ACK,RST *)
 (* HERE - T7 - to be handled here (has no syn, ack, does have Fin, Psh, Urg *)
         match fin, urg, psh with
-        | true, true, true  -> process_t7
+        | true, true, true  -> process_t7 t id ~pkt ~ack_number ~sequence
         | _, _, _           ->
           Log.s debug "input-no-pcb: unknown packet";
           Lwt.return_unit
