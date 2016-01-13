@@ -599,6 +599,26 @@ struct
         (* ACK but no matching pcb and no listen - send RST *)
         Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
 
+(* HERE My code to handle T7 probe from nmap *)
+(* Think need to find a way to make F=AR rather than F=R (suspect F=R will happen) *)
+(* In xmit_pcb, sets rx_ack so should have F=AR actually *)
+  let process_t7 t id ~pkt ~ack_number ~sequence =
+    Log.f debug (with stats "process-t7-probe";
+    match listeners id.WIRE.local_port with
+    | Some pushf ->  (* Open, listening port *)
+      let tx_isn = Sequence.of_int 0 in
+      let tx_wnd = Tcp_wire.get_tcp_window pkt in
+      let rx_wnd = 0 in
+      let rx_wnd_scaleoffer = wscale_default in
+      let options = [] in
+      new_sever_connection t
+        { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
+        id pushf ~fin:false ~ecn:false
+      >>= fun _ ->
+      Lwt.return_unit
+    | None -> Tx.send_rst t id ~sequence ~ack_number ~syn:false ~fin:false (* Closed port *)
+(* End my code *)
+
 (* HERE
  * Calls other functions, e.g. process_syn and process_synack
  * So, may need to find where this is called to find control logic for params
@@ -606,15 +626,18 @@ struct
   let input_no_pcb t listeners pkt id =
 (*    printf "input_no_pcb: packet without handler";    *)
     match Tcp_wire.get_rst pkt with
-    | true -> process_reset t id
-    | false ->
-      let sequence = Tcp_wire.get_tcp_sequence pkt in
+    | true  -> process_reset t id
+    | false -> let sequence = Tcp_wire.get_tcp_sequence pkt in
 (* HERE Takes options from incoming packet - edit these as necessary *)
       let options = Wire.get_options pkt in
       let ack_number = Tcp_wire.get_tcp_ack_number pkt in
       let syn = Tcp_wire.get_syn pkt in
       let ack = Tcp_wire.get_ack pkt in
+(* HERE My code *)
       let fin = Tcp_wire.get_fin pkt in
+      let urg = Tcp_wire.get_urg pkt in
+      let psh = Tcp_wire.get_psh pkt in
+(* End my code *)
       match syn, ack with
       | true , true  -> process_synack t id ~pkt ~ack_number ~sequence
                           ~options ~syn ~fin
@@ -625,8 +648,11 @@ struct
       | false, false ->
         (* What the hell is this packet? No SYN,ACK,RST *)
 (* HERE - T7 - to be handled here (has no syn, ack, does have Fin, Psh, Urg *)
-        Log.s debug "input-no-pcb: unknown packet";
-        Lwt.return_unit
+        match fin, urg, psh with
+        | true, true, true  -> process_t7
+        | _, _, _           ->
+          Log.s debug "input-no-pcb: unknown packet";
+          Lwt.return_unit
 
 (* HERE
  * Calls either Rx.input | input_no_pcb
