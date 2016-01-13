@@ -604,7 +604,7 @@ struct
 (* In xmit_pcb, sets rx_ack so should have F=AR actually *)
   let process_t7 t id ~pkt ~ack_number ~sequence =
     Log.f debug (with_stats "process-t7-probe" t);
-    match listeners id.WIRE.local_port with
+    match hashtbl_find t.listens id with
     | Some pushf ->  (* Open, listening port *)
       let tx_isn = Sequence.of_int 0 in
       let tx_wnd = Tcp_wire.get_tcp_window pkt in
