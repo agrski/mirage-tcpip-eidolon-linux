@@ -338,10 +338,6 @@ struct
     in
     let (rx_wnd_scale, tx_wnd_scale), opts =
       resolve_wnd_scaling options rx_wnd_scaleoffer
-(* HERE add this next bit in to manually hard-code value of rx_wnd_scale *)
-(*    in    *)
-(*    let (rx_wnd_scale, tx_wnd_scale) = (0 , tx_wnd_scale)   *)
-(* end manual hard-coding *)
     in
     (* Set up the windowing variables *)
     let rx_isn = Sequence.of_int32 sequence in
@@ -421,22 +417,11 @@ struct
     Hashtbl.add t.listens id (params.tx_isn, (pushf, (pcb, th)));
     Stats.incr_listen ();
     (* Queue a SYN ACK for transmission *)
-(* HERE Sets a value for MSS - may need to modify from  1460 *)
+(* HERE Sets a value for MSS - may need to modify from 1460 *)
 (* MSS value may have been set in pcb.window already - need to check:
     If set, leave it alone (otherwise overwrites to always use mss_default
     If not, set to mss_default
  *)
-(*
-    let mss_val = List.fold_left (fun a -> function
-      | Options.MSS m -> Some m
-      | _ -> a)
-      None wnd
-    in
-    let options =
-      match mss_val with
-        | Some m  -> printf "\nMSS:%d\n" m; opts        (* MSS already set *)
-        | None    -> Options.MSS mss_default :: opts    (* MSS not yet set *)
-*)
     let mss_val = Window.tx_mss pcb.wnd     (* Not an int option, just an int *)
     in
     let options = Options.MSS mss_val :: opts
@@ -448,10 +433,6 @@ struct
     in
 (* End my code *)
     TXS.output ~flags ~options ~ecn pcb.txq [] >>= fun () -> Lwt.return (pcb, th)
-(* ORIGINAL
-    TXS.output ~flags:Segment.Syn ~options pcb.txq [] >>= fun () ->
-    Lwt.return (pcb, th)
- *)
 
 (* Looks like it sets up a connection as a client - active-open end *)
 (* Apparently SYN has already been sent, so this func only sends ACK *)
@@ -598,29 +579,6 @@ struct
       | None ->
         (* ACK but no matching pcb and no listen - send RST *)
         Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
-
-(* HERE My code to handle T7 probe from nmap *)
-(* The T7 probe is sent to a closed port - need to work on rst response *)
-(* Think need to find a way to make F=AR rather than F=R (suspect F=R will happen) *)
-(* In xmit_pcb, sets rx_ack so should have F=AR actually *)
-(*
-let process_t7 t id ~listeners ~pkt ~ack_number ~sequence =
-    Log.f debug (with_stats "process-t7-probe" t);
-    match listeners id.WIRE.local_port with
-    | Some pushf ->  (* Open, listening port *)
-      let tx_isn = Sequence.of_int 0 in
-      let tx_wnd = Tcp_wire.get_tcp_window pkt in
-      let rx_wnd = 0 in
-      let rx_wnd_scaleoffer = wscale_default in
-      let options = [] in
-      new_server_connection t
-        { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
-        id pushf ~fin:false ~ecn:false
-      >>= fun _ ->
-      Lwt.return_unit
-    | None -> Tx.send_rst t id ~sequence ~ack_number ~syn:false ~fin:false (* Closed port *)
- *)
-(* End my code *)
 
 (* HERE My code for 2nd attempt at handling T7 probe  *)
 (* The T7 probe is sent to a closed port              *)
