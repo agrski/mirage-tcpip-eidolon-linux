@@ -602,9 +602,9 @@ struct
 (* HERE My code to handle T7 probe from nmap *)
 (* Think need to find a way to make F=AR rather than F=R (suspect F=R will happen) *)
 (* In xmit_pcb, sets rx_ack so should have F=AR actually *)
-  let process_t7 t id ~pkt ~ack_number ~sequence =
+let process_t7 t id ~listeners ~pkt ~ack_number ~sequence =
     Log.f debug (with_stats "process-t7-probe" t);
-    match hashtbl_find t.listens id with
+    match listeners id.WIRE.local_port with
     | Some pushf ->  (* Open, listening port *)
       let tx_isn = Sequence.of_int 0 in
       let tx_wnd = Tcp_wire.get_tcp_window pkt in
@@ -649,7 +649,7 @@ struct
         (* What the hell is this packet? No SYN,ACK,RST *)
 (* HERE - T7 - to be handled here (has no syn, ack, does have Fin, Psh, Urg *)
         match fin, urg, psh with
-        | true, true, true  -> process_t7 t id ~pkt ~ack_number ~sequence
+        | true, true, true  -> process_t7 t id ~listeners ~pkt ~ack_number ~sequence
         | _, _, _           ->
           Log.s debug "input-no-pcb: unknown packet";
           Lwt.return_unit
