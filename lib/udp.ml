@@ -49,7 +49,12 @@ module Make(Ip: V1_LWT.IP) = struct
         (Wire_structs.get_udp_length buf - Wire_structs.sizeof_udp)
     in
     match listeners ~dst_port with
+(* HERE nmap's U1 probe is sent to a closed port, so should be handled here   *)
     | None    -> Lwt.return_unit
+(*    | None    ->
+      let src_port = Wire_structs.get_udp_source_port buf in
+        write ~src ~dist ~src_port data
+ *)
     | Some fn ->
       let src_port = Wire_structs.get_udp_source_port buf in
       fn ~src ~dst ~src_port data
