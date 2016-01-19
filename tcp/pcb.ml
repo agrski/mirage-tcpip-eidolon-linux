@@ -600,8 +600,10 @@ struct
         Tx.send_rst t id ~sequence ~ack_number ~syn ~fin
 
 (* HERE My code to handle T7 probe from nmap *)
+(* The T7 probe is sent to a closed port - need to work on rst response *)
 (* Think need to find a way to make F=AR rather than F=R (suspect F=R will happen) *)
 (* In xmit_pcb, sets rx_ack so should have F=AR actually *)
+(*
 let process_t7 t id ~listeners ~pkt ~ack_number ~sequence =
     Log.f debug (with_stats "process-t7-probe" t);
     match listeners id.WIRE.local_port with
@@ -617,7 +619,16 @@ let process_t7 t id ~listeners ~pkt ~ack_number ~sequence =
       >>= fun _ ->
       Lwt.return_unit
     | None -> Tx.send_rst t id ~sequence ~ack_number ~syn:false ~fin:false (* Closed port *)
+ *)
 (* End my code *)
+
+(* HERE My code for 2nd attempt at handling T7 probe  *)
+(* The T7 probe is sent to a closed port              *)
+let process_t7 t id ~pkt ~ack_number ~sequence =
+  Log.f debug (with_stats "process-t7-probe" t);
+  (* syn:true sets seq # = 0                          *)
+  (* Hope settings seq=-1 is sneaky, fragile way to make A=Z, by -1+1=0   *)
+  Tx.send_rst t id ~sequence ~ack_number ~syn:true ~fin:false
 
 (* HERE
  * Calls other functions, e.g. process_syn and process_synack
@@ -649,7 +660,7 @@ let process_t7 t id ~listeners ~pkt ~ack_number ~sequence =
         (* What the hell is this packet? No SYN,ACK,RST *)
 (* HERE - T7 - to be handled here (has no syn, ack, does have Fin, Psh, Urg *)
         match fin, urg, psh with
-        | true, true, true  -> process_t7 t id ~listeners ~pkt ~ack_number ~sequence
+        | true, true, true  -> process_t7 t id ~pkt ~ack_number ~sequence
         | _, _, _           ->
           Log.s debug "input-no-pcb: unknown packet";
           Lwt.return_unit
