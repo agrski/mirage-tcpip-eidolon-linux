@@ -611,7 +611,7 @@ let process_t7 t id ~listeners ~pkt ~ack_number ~sequence =
       let rx_wnd = 0 in
       let rx_wnd_scaleoffer = wscale_default in
       let options = [] in
-      new_sever_connection t
+      new_server_connection t
         { tx_wnd; sequence; options; tx_isn; rx_wnd; rx_wnd_scaleoffer }
         id pushf ~fin:false ~ecn:false
       >>= fun _ ->
