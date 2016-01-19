@@ -628,7 +628,7 @@ let process_t7 t id ~pkt ~ack_number ~sequence =
   Log.f debug (with_stats "process-t7-probe" t);
   (* syn:true sets seq # = 0                          *)
   (* Hope settings seq-=1 is sneaky, fragile way to make A=S, by -1+1=0   *)
-  let sequence = sequence - 1 in
+  let sequence = sequence - 1l in
   Tx.send_rst t id ~sequence ~ack_number ~syn:true ~fin:false
 
 (* HERE
