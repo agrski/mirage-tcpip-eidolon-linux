@@ -142,6 +142,7 @@ struct
         | false -> Sequence.of_int32 ack_number (* Original value for seq *)
       in
       let rx_ack = match syn with
+        (* If true, increment ack number, else unsolicited -> indicate undesired with 0 *)
         | true  -> Some (Sequence.of_int32 (Int32.add sequence datalen)) (* This orig *)
         | false -> None (* In wire.ml, if rx_ack = None, sets to 0l and doesn't set ACK *)
       in
