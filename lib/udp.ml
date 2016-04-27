@@ -36,11 +36,6 @@ module Make(Ip: V1_LWT.IP) = struct
 
   let id {ip} = ip
 
-(* HERE
-    Following funcs put some stuff together.
-    Called from where?
-    Where do params come from?
- *)
   (* FIXME: [t] is not taken into account at all? *)
   let input ~listeners _t ~src ~dst buf =
     let dst_port = Wire_structs.get_udp_dest_port buf in
@@ -51,10 +46,6 @@ module Make(Ip: V1_LWT.IP) = struct
     match listeners ~dst_port with
 (* HERE nmap's U1 probe is sent to a closed port, so should be handled here   *)
     | None    -> Lwt.return_unit
-(*    | None    ->
-      let src_port = Wire_structs.get_udp_source_port buf in
-        write ~src ~dist ~src_port data
- *)
     | Some fn ->
       let src_port = Wire_structs.get_udp_source_port buf in
       fn ~src ~dst ~src_port data
