@@ -36,16 +36,33 @@ module Make(Ip: V1_LWT.IP) = struct
 
   let id {ip} = ip
 
+  let respond_u1 ~src ~dst ~src_port t ip_hdr buf =
+    let frame, hdr_len = Ip.allocate_frame t.ip ~dst:src ~proto:`ICMP in
+    let frame = Cstruct.set_len frame
+      (hdr_len + Wire_structs.Ipv4_wire.sizeof_icmpv4)
+    in
+    let icmp_frame = Cstruct.shift frame hdr_len in
+    Wire_structs.Ipv4_wire.set_icmpv4_csum icmp_frame 0;
+    Wire_structs.Ipv4_wire.set_icmpv4_ty icmp_frame 3;
+    Wire_structs.Ipv4_wire.set_icmpv4_code icmp_frame 3;
+    Ip.writev t.ip frame (ip_hdr::buf)
+
   (* FIXME: [t] is not taken into account at all? *)
   let input ~listeners _t ~src ~dst buf =
-    let dst_port = Wire_structs.get_udp_dest_port buf in
+    let ihl = (Wire_structs.Ipv4_wire.get_ipv4_hlen_version buf land 0x4f) * 4 in
+    let payload_len = Wire_structs.Ipv4_wire.get_ipv4_len buf - ihl in
+    let ip_hdr, udp_pkt = Cstruct.split buf ihl in
+    (* Don't check if data is longer than advertised *)
+    let dst_port = Wire_structs.get_udp_dest_port udp_pkt in
     let data =
-      Cstruct.sub buf Wire_structs.sizeof_udp
-        (Wire_structs.get_udp_length buf - Wire_structs.sizeof_udp)
+      Cstruct.sub udp_pkt Wire_structs.sizeof_udp
+        (Wire_structs.get_udp_length udp_pkt - Wire_structs.sizeof_udp)
     in
+    let src_port = Wire_structs.get_udp_source_port udp_pkt in
     match listeners ~dst_port with
 (* HERE nmap's U1 probe is sent to a closed port, so should be handled here   *)
-    | None    -> Lwt.return_unit
+    | None    ->
+      respond_u1 ~src ~dst ~src_port _t ip_hdr udp_pkt
     | Some fn ->
       let src_port = Wire_structs.get_udp_source_port buf in
       fn ~src ~dst ~src_port data
