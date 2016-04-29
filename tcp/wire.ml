@@ -97,8 +97,8 @@ module Make (Ip:V1_LWT.IP) = struct
     end;
     if rst then
       begin
-        Printf.printf "\nExisting TTL value: %d" (Wire_structs.Ipv4_wire.get_ipv4_ttl frame);
-(*        Wire_structs.Ipv4_wire.set_ipv4_ttl frame 255; *)
+        Printf.printf "\nExisting TTL value: %d\n" (Wire_structs.Ipv4_wire.get_ipv4_ttl frame);
+        Wire_structs.Ipv4_wire.set_ipv4_ttl frame 255;
         Printf.printf "Set IPv4 TTL to 255\n"
       end;
 (* HERE Sets ACK *)
