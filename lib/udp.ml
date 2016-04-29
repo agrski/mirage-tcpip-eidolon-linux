@@ -48,7 +48,8 @@ module Make(Ip: V1_LWT.IP) = struct
 (*    Ip.writev t.ip frame (ip_hdr::buf) *)
     match buf with
     | data :: tl when Cstruct.len data == 300 ->
-      Ip.writev t.ip frame (ip_hdr::[data])
+      let extra_data = Cstruct.sub data 0 20 in (*Without extra, comes to 0x164, want 178 *)
+      Ip.writev t.ip frame (ip_hdr::extra_data::[data])
     | _ ->
       Ip.writev t.ip frame [ip_hdr]
 
