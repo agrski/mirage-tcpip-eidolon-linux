@@ -45,26 +45,45 @@ module Make(Ip: V1_LWT.IP) = struct
     Wire_structs.Ipv4_wire.set_icmpv4_csum icmp_frame 0;
     Wire_structs.Ipv4_wire.set_icmpv4_ty icmp_frame 3;
     Wire_structs.Ipv4_wire.set_icmpv4_code icmp_frame 3;
-    Ip.writev t.ip frame (ip_hdr::buf)
+(*    Ip.writev t.ip frame (ip_hdr::buf) *)
+    match buf with
+    | data :: tl when Cstruct.len data == 300 ->
+      Ip.writev t.ip frame (ip_hdr::[data])
+    | _ ->
+      Ip.writev t.ip frame [ip_hdr]
 
   (* FIXME: [t] is not taken into account at all? *)
   let input ~listeners _t ~src ~dst buf =
-    let ihl = (Wire_structs.Ipv4_wire.get_ipv4_hlen_version buf land 0x4f) * 4 in
+    let ihl = (Wire_structs.Ipv4_wire.get_ipv4_hlen_version buf land 0xf) * 4 in
     let payload_len = Wire_structs.Ipv4_wire.get_ipv4_len buf - ihl in
+    (* Headers are 48 bytes total - 48 + 128 = 176 = 0xb0 *)
+    let icmp_split_point =
+      if Cstruct.len buf > (ihl + 128) then
+        (ihl + Wire_structs.sizeof_udp) (* Use data *)
+      else
+        (ihl + 8)
+    in
+    let icmp_data, _ = Cstruct.split buf icmp_split_point in
     let ip_hdr, udp_pkt = Cstruct.split buf ihl in
-    (* Don't check if data is longer than advertised *)
+    let udp_pkt =
+      if Cstruct.len udp_pkt > payload_len then
+        Cstruct.sub udp_pkt 0 payload_len
+      else
+        udp_pkt
+    in
     let dst_port = Wire_structs.get_udp_dest_port udp_pkt in
     let data =
       Cstruct.sub udp_pkt Wire_structs.sizeof_udp
         (Wire_structs.get_udp_length udp_pkt - Wire_structs.sizeof_udp)
     in
+    if Cstruct.len data == 300 then
+      Printf.printf "\n300 bytes of data in UDP packet\n";
     let src_port = Wire_structs.get_udp_source_port udp_pkt in
     match listeners ~dst_port with
 (* HERE nmap's U1 probe is sent to a closed port, so should be handled here   *)
     | None    ->
-      respond_u1 ~src ~dst ~src_port _t ip_hdr udp_pkt
+      respond_u1 ~src ~dst ~src_port _t icmp_data [data]
     | Some fn ->
-      let src_port = Wire_structs.get_udp_source_port buf in
       fn ~src ~dst ~src_port data
 
   let writev ?source_port ~dest_ip ~dest_port t bufs =
