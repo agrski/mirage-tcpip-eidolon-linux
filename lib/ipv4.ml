@@ -125,7 +125,7 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
       Wire_structs.Ipv4_wire.set_ipv4_off buf (1 lsl 14);     (* Sets DF bit *)
     else
 *)
-      Wire_structs.Ipv4_wire.set_ipv4_off buf 0;                (* Leaves DF unset *)
+    Wire_structs.Ipv4_wire.set_ipv4_off buf 0;                (* Leaves DF unset *)
 (* HERE Set TTL = 64 = 0x40; was 40 = 0x28 *)
     Wire_structs.Ipv4_wire.set_ipv4_ttl buf 64; (* TODO *)
     let proto = Wire_structs.Ipv4_wire.protocol_to_int proto in
