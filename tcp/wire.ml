@@ -48,6 +48,7 @@ module Make (Ip:V1_LWT.IP) = struct
   let xmit ~ip ~id ?(rst=false) ?(syn=false) ?(fin=false) ?(psh=false)
       ~rx_ack ~seq ~window ~options ~ecn datav =
     (* Make a TCP/IP header frame *)
+    Printf.printf "\nWire::xmit\trst=%b\n" rst;
     let frame, header_len = Ip.allocate_frame ip ~dst:id.dest_ip ~proto:`TCP in
     (* Shift this out by the combined ethernet + IP header sizes *)
     let tcp_frame = Cstruct.shift frame header_len in
@@ -94,6 +95,12 @@ module Make (Ip:V1_LWT.IP) = struct
       Tcp_wire.set_ece tcp_frame;
       Tcp_wire.set_cwr tcp_frame
     end;
+    if rst then
+      begin
+        Printf.printf "\nExisting TTL value: %d\n" (Wire_structs.Ipv4_wire.get_ipv4_ttl frame);
+        Wire_structs.Ipv4_wire.set_ipv4_ttl frame 255;
+        Printf.printf "Set IPv4 TTL to 255\n"
+      end;
 (* HERE Sets ACK *)
     if rx_ack <> None then Tcp_wire.set_ack tcp_frame;
     if rst then Tcp_wire.set_rst tcp_frame;

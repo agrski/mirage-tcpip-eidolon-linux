@@ -125,9 +125,9 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
       Wire_structs.Ipv4_wire.set_ipv4_off buf (1 lsl 14);     (* Sets DF bit *)
     else
 *)
-      Wire_structs.Ipv4_wire.set_ipv4_off buf 0;                (* Leaves DF unset *)
+    Wire_structs.Ipv4_wire.set_ipv4_off buf 0;                (* Leaves DF unset *)
 (* HERE Set TTL = 64 = 0x40; was 40 = 0x28 *)
-    Wire_structs.Ipv4_wire.set_ipv4_ttl buf 64; (* TODO *)
+    Wire_structs.Ipv4_wire.set_ipv4_ttl buf 64; (* 0x40 or 0xFF *)
     let proto = Wire_structs.Ipv4_wire.protocol_to_int proto in
     Wire_structs.Ipv4_wire.set_ipv4_proto buf proto;
     Wire_structs.Ipv4_wire.set_ipv4_src buf (Ipaddr.V4.to_int32 t.ip);
@@ -212,7 +212,7 @@ module Make(Ethif: V1_LWT.ETHIF) (Arpv4 : V1_LWT.ARP) = struct
       match Wire_structs.Ipv4_wire.int_to_protocol proto with
       | Some `ICMP -> icmp_input t src hdr data
       | Some `TCP  -> tcp ~src ~dst data
-      | Some `UDP  -> udp ~src ~dst data
+      | Some `UDP  -> udp ~src ~dst buf
       | None       -> default ~proto ~src ~dst data
     end else Lwt.return_unit
 
