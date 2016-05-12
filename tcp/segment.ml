@@ -300,7 +300,6 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
             ) else (
               (* Retransmit *)
               let flags = rexmit_seg.flags in
-(* HERE No options given at all - hopefully don't need to handle rtx though *)
               let options = [] in (* TODO: put the right options *)
               let ecn = false in  (* HERE Default for ecn        *)
               Log.f info (fun fmt ->
@@ -362,7 +361,6 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
                   Sequence.pp rexmit_seg.seq Sequence.pp seq);
             let { wnd; _ } = q in
             let flags=rexmit_seg.flags in
-(* HERE Once again, no options at all - hopefully don't need to touch *)
             let options=[] in   (* TODO: put the right options    *)
             let ecn = false in  (* HERE Default for ecn           *)
             Lwt.async
@@ -418,8 +416,6 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
      The transmitter should check that the segment size will
      will not be greater than the transmit window.
    *)
-(* HERE Where do options get passed in? *)
-(* Options passed in from at least /tcp/pcb.ml *)
   let output ?(flags=No_flags) ?(options=[]) ?(ecn=false) q data =
     (* Transmit the packet to the wire
          TODO: deal with transmission soft/hard errors here RFC5461 *)

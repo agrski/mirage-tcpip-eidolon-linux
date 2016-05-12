@@ -47,7 +47,6 @@ module Rx = struct
     let cur_size = 0l in
     { q; wnd; writers; readers; max_size; cur_size; watcher }
 
-(* HERE Sets size of window; seems unreasonable to change *)
   let notify_size_watcher t =
     let rx_wnd = max 0l (Int32.sub t.max_size t.cur_size) in
     Window.set_rx_wnd t.wnd rx_wnd;
@@ -143,7 +142,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
     |[d] -> Int32.of_int (Cstruct.len d)
     |ds -> Int32.of_int (List.fold_left (fun a b -> Cstruct.len b + a) 0 ds)
 
-  (* Check how many bytes are available to write to output buffer *)
+(* Check how many bytes are available to write to output buffer *)
 (* Compares buffer space to TCP segment payload space *)
   let available t =
     let a = Int32.sub t.max_size t.bufbytes in
@@ -161,7 +160,7 @@ module Tx (Time:V1_LWT.TIME) (Clock:V1.CLOCK) = struct
       Lwt.return_unit
     end
     else begin
-(* Create a writer to wait for monitor to wake it up *)
+      (* Create a writer to wait for monitor to wake it up *)
       let th,u = MProf.Trace.named_task "User_buffer.wait_for" in
       let node = Lwt_sequence.add_r u t.writers in
       Lwt.on_cancel th (fun _ -> Lwt_sequence.remove node);

@@ -45,7 +45,6 @@ module Make(Ip: V1_LWT.IP) = struct
     Wire_structs.Ipv4_wire.set_icmpv4_csum icmp_frame 0;
     Wire_structs.Ipv4_wire.set_icmpv4_ty icmp_frame 3;
     Wire_structs.Ipv4_wire.set_icmpv4_code icmp_frame 3;
-(*    Ip.writev t.ip frame (ip_hdr::buf) *)
     match buf with
     | data :: tl when Cstruct.len data == 300 ->
       let extra_data = Cstruct.sub data 0 20 in (*Without extra, comes to 0x164, want 178 *)
@@ -53,7 +52,6 @@ module Make(Ip: V1_LWT.IP) = struct
     | _ ->
       Ip.writev t.ip frame [ip_hdr]
 
-  (* FIXME: [t] is not taken into account at all? *)
   let input ~listeners _t ~src ~dst buf =
     let ihl = (Wire_structs.Ipv4_wire.get_ipv4_hlen_version buf land 0xf) * 4 in
     let payload_len = Wire_structs.Ipv4_wire.get_ipv4_len buf - ihl in

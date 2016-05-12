@@ -4,7 +4,6 @@ cstruct ethernet {
     uint16_t       ethertype
   } as big_endian
 
-(* Fits in with above uint16_t ethertype - defines type *)
 cenum ethertype {
     ARP  = 0x0806;
     IPv4 = 0x0800;
@@ -30,7 +29,6 @@ cstruct udp {
     uint16_t checksum
   } as big_endian
 
-(* HERE Defines IPv4 header *)
 module Ipv4_wire = struct
   cstruct ipv4 {
       uint8_t        hlen_version;
@@ -46,7 +44,6 @@ module Ipv4_wire = struct
       uint32_t       dst
     } as big_endian
 
-(* HERE Defines ICMP header *)
   cstruct icmpv4 {
       uint8_t ty;
       uint8_t code;
@@ -67,7 +64,6 @@ module Ipv4_wire = struct
     | `UDP    -> 17
 end
 
-(* HERE Defines TCP header *)
 module Tcp_wire = struct
   cstruct tcp {
       uint16_t src_port;
@@ -89,10 +85,6 @@ module Tcp_wire = struct
       uint16_t len
     } as big_endian
 
-(* HERE
-    May need to modify this behaviour
-    What behaviour ~exactly~ does get_tcp_dataoff | set_tcp_dataoff have?
-*)
   (* XXX note that we overwrite the lower half of dataoff
    * with 0, so be careful when implemented CWE flag which
    * sits there *)
@@ -126,10 +118,8 @@ module Tcp_wire = struct
     Cstruct.set_uint8 buf 13 ((Cstruct.get_uint8 buf 13) lor (1 lsl 7))
 
 (* HERE My addition *)
-  (* Successfully sets urgent pointer to non-zero value, as recognised by nmap Q=U *)
   let set_urg_ptr_nz buf =
     Cstruct.BE.set_uint16 buf 18 ((Cstruct.BE.get_uint16 buf 18) lor (1 lsl 0))
-  (* Should set reserved field in tcp header to 100 *)
   let set_rsvd_nz buf =
     Cstruct.set_uint8 buf 12 ((Cstruct.get_uint8 buf 12) lor (1 lsl 3))
 (* End my additions *)

@@ -104,17 +104,14 @@ let write_iter buf =
   | Noop ->
     Cstruct.set_uint8 buf 0 1;
     1
-(* HERE can hard-code MSS size here if necessary *)
   | MSS sz ->
     set_tlen 2 4;
     Cstruct.BE.set_uint16 buf 2 sz;
     4
-(* HERE Can hard-code window shift size if necessary in here *)
   | Window_size_shift shift ->
     set_tlen 3 3;
     Cstruct.set_uint8 buf 2 shift;
     3
-(* HERE Can hard-code SACK toggle here *)
   | SACK_ok ->
     set_tlen 4 2;
     2
@@ -129,13 +126,11 @@ let write_iter buf =
       | [] -> () in
     fn 2 acks;
     tlen
-(* HERE can hard-code/change timestamping here *)
   | Timestamp (tsval,tsecr) ->
     set_tlen 8 10;
     Cstruct.BE.set_uint32 buf 2 tsval;
     Cstruct.BE.set_uint32 buf 6 tsecr;
     10
-(* HERE Can handle unknown options here if necessary - e.g. returning zeroes *)
   | Unknown (kind, contents) ->
     let content_len = String.length contents in
     let tlen = content_len + 2 in
@@ -143,7 +138,6 @@ let write_iter buf =
     Cstruct.blit_from_string contents 0 buf 2 content_len;
     tlen
 
-(* HERE Can't find where it appends EOL if len(ts) > 1 *)
 let marshal buf ts =
   (* Apply the write iterator on each stamp *)
   let rec write fn off buf =
@@ -156,7 +150,6 @@ let marshal buf ts =
   in
   let tlen = write write_iter 0 buf ts in
   (* add padding to word length *)
-(* HERE Can set padding values here if necessary *)
   match (4 - (tlen mod 4)) mod 4 with
   | 0 -> tlen
   | 1 ->

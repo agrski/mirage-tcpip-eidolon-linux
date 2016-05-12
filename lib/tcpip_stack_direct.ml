@@ -20,7 +20,6 @@ type direct_ipv4_input = src:Ipaddr.V4.t -> dst:Ipaddr.V4.t -> Cstruct.t -> unit
 module type UDPV4_DIRECT = V1_LWT.UDPV4
   with type ipinput = direct_ipv4_input
 
-(* HERE Where is V1_LWT.TCPV4? Maybe this is what needs editing? *)
 module type TCPV4_DIRECT = V1_LWT.TCPV4
   with type ipinput = direct_ipv4_input
 
@@ -79,7 +78,6 @@ struct
 
   let err_invalid_port p = Printf.sprintf "invalid port number (%d)" p
 
-(* HERE Might be a useful func to use - have UDP listener for NMap *)
   let listen_udpv4 t ~port callback =
     if port < 0 || port > 65535
     then raise (Invalid_argument (err_invalid_port port))
@@ -100,13 +98,11 @@ struct
     >>= fun () ->
     Ipv4.set_ip_gateways t.ipv4 info.Dhcp.gateways
     >>= fun () ->
-(* HERE This is seen in output? *)
     Printf.ksprintf (Console.log_s t.c) "DHCP offer received and bound to %s nm %s gw [%s]"
       (Ipaddr.V4.to_string info.Dhcp.ip_addr)
       (match info.Dhcp.netmask with None -> "none" | Some nm -> Ipaddr.V4.to_string nm)
       (String.concat ", " (List.map Ipaddr.V4.to_string info.Dhcp.gateways))
 
-(* HERE This is seen in output *)
   let configure t config =
     match config with
     | `DHCP -> begin

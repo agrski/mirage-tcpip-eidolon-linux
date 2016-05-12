@@ -54,8 +54,7 @@ type t = {
 
 let count_ackd_segs = MProf.Counter.make ~name:"tcp-ackd-segs"
 
-(* HERE May need to edit - harder for Linux; need to compare probe MSS to response MSS *)
-let default_mss = 536    (* Want this as default = 0x218 *)
+let default_mss = 536    (* Default = 0x218 *)
 let max_mss     = 1460
 
 let alpha = 0.125  (* see RFC 2988 *)
@@ -72,7 +71,6 @@ let pp fmt t =
     Sequence.pp t.snd_una
 
 (* Initialise the sequence space *)
-(* HERE Where do these values get passed in from? *)
 let t ~rx_wnd_scale ~tx_wnd_scale ~rx_wnd ~tx_wnd ~rx_isn ~tx_mss ~tx_isn =
   let tx_nxt = tx_isn in
   let rx_nxt = Sequence.(incr rx_isn) in

@@ -37,7 +37,6 @@ module Make(Netif : V1_LWT.NETWORK) = struct
   let id t  = t.netif
   let mac t = Netif.mac t.netif
 
-(* HERE Where is this called from? Doesn't seem to do anything with TCP though *)
   let input ~arpv4 ~ipv4 ~ipv6 t frame =
     MProf.Trace.label "ethif.input";
     let of_interest dest =
